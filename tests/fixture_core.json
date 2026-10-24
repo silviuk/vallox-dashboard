@@ -1,0 +1,246 @@
+{
+ "entities": {
+  "fan.vallox": {
+   "entity_id": "fan.vallox",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": null
+  },
+  "sensor.vallox_outdoor_air": {
+   "entity_id": "sensor.vallox_outdoor_air",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "outdoor_air"
+  },
+  "sensor.vallox_supply_air": {
+   "entity_id": "sensor.vallox_supply_air",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "supply_air"
+  },
+  "sensor.vallox_extract_air": {
+   "entity_id": "sensor.vallox_extract_air",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "extract_air"
+  },
+  "sensor.vallox_exhaust_air": {
+   "entity_id": "sensor.vallox_exhaust_air",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "exhaust_air"
+  },
+  "sensor.vallox_supply_cell_air": {
+   "entity_id": "sensor.vallox_supply_cell_air",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "supply_cell_air"
+  },
+  "sensor.vallox_efficiency": {
+   "entity_id": "sensor.vallox_efficiency",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "efficiency"
+  },
+  "sensor.vallox_humidity": {
+   "entity_id": "sensor.vallox_humidity",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": null
+  },
+  "sensor.vallox_co2": {
+   "entity_id": "sensor.vallox_co2",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": null
+  },
+  "sensor.vallox_current_profile": {
+   "entity_id": "sensor.vallox_current_profile",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "current_profile"
+  },
+  "sensor.vallox_fan_speed": {
+   "entity_id": "sensor.vallox_fan_speed",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "fan_speed"
+  },
+  "sensor.vallox_remaining_time_for_filter": {
+   "entity_id": "sensor.vallox_remaining_time_for_filter",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "remaining_time_for_filter"
+  },
+  "sensor.vallox_cell_state": {
+   "entity_id": "sensor.vallox_cell_state",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "cell_state"
+  },
+  "binary_sensor.vallox_post_heater": {
+   "entity_id": "binary_sensor.vallox_post_heater",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "post_heater"
+  },
+  "switch.vallox_bypass_locked": {
+   "entity_id": "switch.vallox_bypass_locked",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "bypass_locked"
+  },
+  "date.vallox_filter_change_date": {
+   "entity_id": "date.vallox_filter_change_date",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "filter_change_date"
+  },
+  "number.vallox_supply_air_temperature_home": {
+   "entity_id": "number.vallox_supply_air_temperature_home",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "supply_air_target_home"
+  },
+  "number.vallox_supply_air_temperature_away": {
+   "entity_id": "number.vallox_supply_air_temperature_away",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "supply_air_target_away"
+  },
+  "number.vallox_supply_air_temperature_boost": {
+   "entity_id": "number.vallox_supply_air_temperature_boost",
+   "platform": "vallox",
+   "device_id": "dev_core",
+   "translation_key": "supply_air_target_boost"
+  }
+ },
+ "states": {
+  "fan.vallox": {
+   "state": "on",
+   "attributes": {
+    "preset_modes": [
+     "Home",
+     "Away",
+     "Boost",
+     "Fireplace",
+     "Extra",
+     "Auto"
+    ],
+    "preset_mode": "Home",
+    "percentage": 50,
+    "friendly_name": "Vallox"
+   }
+  },
+  "sensor.vallox_outdoor_air": {
+   "state": "6.1",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "device_class": "temperature"
+   }
+  },
+  "sensor.vallox_supply_air": {
+   "state": "17.9",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "device_class": "temperature"
+   }
+  },
+  "sensor.vallox_extract_air": {
+   "state": "21.5",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "device_class": "temperature"
+   }
+  },
+  "sensor.vallox_exhaust_air": {
+   "state": "8.3",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "device_class": "temperature"
+   }
+  },
+  "sensor.vallox_supply_cell_air": {
+   "state": "16.8",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "device_class": "temperature"
+   }
+  },
+  "sensor.vallox_efficiency": {
+   "state": "82",
+   "attributes": {
+    "unit_of_measurement": "%"
+   }
+  },
+  "sensor.vallox_humidity": {
+   "state": "41",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "device_class": "humidity"
+   }
+  },
+  "sensor.vallox_co2": {
+   "state": "620",
+   "attributes": {
+    "unit_of_measurement": "ppm",
+    "device_class": "carbon_dioxide"
+   }
+  },
+  "sensor.vallox_current_profile": {
+   "state": "Home",
+   "attributes": {}
+  },
+  "sensor.vallox_fan_speed": {
+   "state": "50",
+   "attributes": {
+    "unit_of_measurement": "%"
+   }
+  },
+  "sensor.vallox_remaining_time_for_filter": {
+   "state": "2027-02-01T00:00:00+00:00",
+   "attributes": {
+    "device_class": "timestamp"
+   }
+  },
+  "sensor.vallox_cell_state": {
+   "state": "Heat Recovery",
+   "attributes": {}
+  },
+  "binary_sensor.vallox_post_heater": {
+   "state": "off",
+   "attributes": {}
+  },
+  "switch.vallox_bypass_locked": {
+   "state": "off",
+   "attributes": {}
+  },
+  "date.vallox_filter_change_date": {
+   "state": "2026-08-01",
+   "attributes": {}
+  },
+  "number.vallox_supply_air_temperature_home": {
+   "state": "19",
+   "attributes": {
+    "unit_of_measurement": "°C"
+   }
+  },
+  "number.vallox_supply_air_temperature_away": {
+   "state": "19",
+   "attributes": {
+    "unit_of_measurement": "°C"
+   }
+  },
+  "number.vallox_supply_air_temperature_boost": {
+   "state": "19",
+   "attributes": {
+    "unit_of_measurement": "°C"
+   }
+  }
+ },
+ "devices": {
+  "dev_core": {
+   "name": "Vallox 145 MV"
+  }
+ }
+}

@@ -1,0 +1,250 @@
+{
+ "entities": {
+  "climate.ventilation": {
+   "entity_id": "climate.ventilation",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "switch.ventilation_switch": {
+   "entity_id": "switch.ventilation_switch",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "binary_sensor.ventilation": {
+   "entity_id": "binary_sensor.ventilation",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "binary_sensor.ventilation_motor_in": {
+   "entity_id": "binary_sensor.ventilation_motor_in",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "binary_sensor.ventilation_motor_out": {
+   "entity_id": "binary_sensor.ventilation_motor_out",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "binary_sensor.ventilation_summer_mode": {
+   "entity_id": "binary_sensor.ventilation_summer_mode",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "binary_sensor.ventilation_front_heating": {
+   "entity_id": "binary_sensor.ventilation_front_heating",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "binary_sensor.ventilation_service_needed": {
+   "entity_id": "binary_sensor.ventilation_service_needed",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "binary_sensor.ventilation_post_heating": {
+   "entity_id": "binary_sensor.ventilation_post_heating",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "sensor.ventilation_outside_temperature": {
+   "entity_id": "sensor.ventilation_outside_temperature",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "sensor.ventilation_inside_temperature": {
+   "entity_id": "sensor.ventilation_inside_temperature",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "sensor.ventilation_incoming_temperature": {
+   "entity_id": "sensor.ventilation_incoming_temperature",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "sensor.ventilation_exhaust_temperature": {
+   "entity_id": "sensor.ventilation_exhaust_temperature",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "sensor.ventilation_service_counter": {
+   "entity_id": "sensor.ventilation_service_counter",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  },
+  "sensor.ventilation_switch_type": {
+   "entity_id": "sensor.ventilation_switch_type",
+   "platform": "vallox2mqtt",
+   "device_id": "eb4e3bcc8a205ad3e34771764c48640f",
+   "translation_key": null
+  }
+ },
+ "states": {
+  "climate.ventilation": {
+   "state": "fan_only",
+   "attributes": {
+    "hvac_modes": [
+     "heat",
+     "fan_only"
+    ],
+    "min_temp": 7,
+    "max_temp": 35,
+    "target_temp_step": 1,
+    "fan_modes": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8"
+    ],
+    "current_temperature": 9.0,
+    "temperature": 20.0,
+    "fan_mode": "4",
+    "hvac_action": "fan",
+    "icon": "mdi:hvac",
+    "friendly_name": "Ventilation",
+    "supported_features": 9
+   }
+  },
+  "switch.ventilation_switch": {
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Vallox RS485 Ventilation Ventilation switch"
+   }
+  },
+  "binary_sensor.ventilation": {
+   "state": "on",
+   "attributes": {
+    "mode": "FAN",
+    "heating": false,
+    "on": true,
+    "fault": false,
+    "rh_mode": false,
+    "service_needed": false,
+    "summer_mode": false,
+    "motor_in": true,
+    "motor_out": true,
+    "front_heating": false,
+    "speed": 4,
+    "default_fan_speed": 1,
+    "service_period": 12,
+    "service_counter": 8,
+    "heat_target": 20,
+    "switch_active": false,
+    "valloxesp_sw_version": "1.0.0",
+    "switch_type": "boost",
+    "temp_outside": 8,
+    "temp_inside": 18,
+    "temp_incoming": 9,
+    "temp_exhaust": 12,
+    "co2": 0,
+    "icon": "mdi:air-conditioner",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation"
+   }
+  },
+  "binary_sensor.ventilation_motor_in": {
+   "state": "on",
+   "attributes": {
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Motor In"
+   }
+  },
+  "binary_sensor.ventilation_motor_out": {
+   "state": "on",
+   "attributes": {
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Motor Out"
+   }
+  },
+  "binary_sensor.ventilation_summer_mode": {
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Summer Mode"
+   }
+  },
+  "binary_sensor.ventilation_front_heating": {
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Front Heating"
+   }
+  },
+  "binary_sensor.ventilation_service_needed": {
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Service Needed"
+   }
+  },
+  "binary_sensor.ventilation_post_heating": {
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Post Heating"
+   }
+  },
+  "sensor.ventilation_outside_temperature": {
+   "state": "8",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "icon": "mdi:thermometer",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Outside Temperature"
+   }
+  },
+  "sensor.ventilation_inside_temperature": {
+   "state": "18",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "icon": "mdi:thermometer",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Inside Temperature"
+   }
+  },
+  "sensor.ventilation_incoming_temperature": {
+   "state": "9",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "icon": "mdi:thermometer",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Incoming Temperature"
+   }
+  },
+  "sensor.ventilation_exhaust_temperature": {
+   "state": "12",
+   "attributes": {
+    "unit_of_measurement": "°C",
+    "icon": "mdi:thermometer",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Exhaust Temperature"
+   }
+  },
+  "sensor.ventilation_service_counter": {
+   "state": "8",
+   "attributes": {
+    "unit_of_measurement": "Months",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Service Counter"
+   }
+  },
+  "sensor.ventilation_switch_type": {
+   "state": "boost",
+   "attributes": {
+    "unit_of_measurement": "",
+    "friendly_name": "Vallox RS485 Ventilation Ventilation Switch Type"
+   }
+  }
+ },
+ "devices": {
+  "eb4e3bcc8a205ad3e34771764c48640f": {
+   "name": "Vallox RS485 Ventilation",
+   "name_by_user": null
+  }
+ }
+}
