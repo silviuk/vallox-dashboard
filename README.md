@@ -34,7 +34,7 @@ Supported integrations (auto-discovered):
 - **Temperature flow strip:** outdoor → supply, heat recovery, extract → exhaust, when all four temperatures exist. Defaults on for units that already expose 1.2 extras; older units keep their original layout unless you opt in.
 - **Optional shower boost:** timed fan-level buttons, plus countdown and cancel while active, when the package entities exist.
 - **Optional auto humidity boost:** enable toggle and helper tiles when those helpers exist.
-- **Graphic style (1.2.0 / 1.2.1):** digital controller panel and heat-exchanger diagram (see below).
+- **Graphic style (1.2.2):** digital controller panel and heat-exchanger diagram (see below).
 - English and German labels, taken from your Home Assistant language. Light and dark themes follow HA CSS variables.
 
 ## Installation
@@ -209,7 +209,7 @@ You can also generate one for your own entities in the browser console of your d
 
 ## Graphic style
 
-Add `style: graphic` to any section, view or dashboard strategy (1.2.0+; layout polish in 1.2.1):
+Add `style: graphic` to any section, view or dashboard strategy (1.2.0+; phone layout and artwork updated in 1.2.2):
 
 ```yaml
 strategy:
@@ -262,7 +262,9 @@ The exchanger is an abstract front-view schematic: four top ducts, a tall centra
 extract fan lower left, supply fan right, pre-heater beside the F7 outdoor filter at
 lower right, post-heater on the supply side, and a bottom bypass flap.
 It is an orientation aid, not an installation or physical duct-routing diagram.
-In 1.2.1 the streams cross the full cell between opposite faces through parallel diagonal channels
+In 1.2.2 round duct collars follow Modell R numbering (left to right: 4 exhaust,
+1 outdoor, 2 extract, 3 supply; 4 and 2 are farther back). F7 and G3 filters are pleated.
+The streams cross the tall hexagonal cell between opposite faces through diagonal channels
 with subtle plates and warm/cold gradients; the heat recovery badge sits beside the cell,
 and heater labels sit beside their symbols.
 Action buttons sit in one row of three on desktop and phones (at least 40 px high at the
@@ -287,8 +289,10 @@ Missing roles are omitted; unavailable numeric readings show **—**. Recovery i
 estimate unless an efficiency sensor exists. Indicators show reported states, not sensor
 threshold alarms. The F7 label is a schematic component, not a measured filter condition.
 
-Graphic overview starts with the two cards in half-width section slots. SVGs scale to
-their available width; standalone cards default to a full-width slot. It retains the
+Graphic overview stacks both graphics in full-width (12-column) section slots on all
+screen sizes, including phones. Automatic rows follow each SVG’s natural aspect ratio
+without a reserved empty height. The remaining switch-function tile also fills its row.
+Standalone cards use the same full-width, automatic-row defaults. It retains the
 alarm banner/groups, shower/humidity controls, setpoints, service details and history.
 It removes the duplicated climate, boost, temperature, efficiency, fan motor, heater
 and summer-mode tiles and the temperature flow strip. Supply-after-cell, RPM, cell-state
@@ -311,7 +315,7 @@ The harness uses sanitized fixture samples (6/17/21/9 °C, level 3, post-heat on
 |---|---|
 | ![Graphic style, light](images/graphic-light.png) | ![Graphic style, dark](images/graphic-dark.png) |
 
-Narrow layout (430 px): [light](images/graphic-mobile-light.png) · [dark](images/graphic-mobile-dark.png) · [German](images/graphic-mobile-de.png).
+Phone sections layout (390 px, strategy grid sizing; includes the following switch tile): [light](images/graphic-mobile-light.png) · [dark](images/graphic-mobile-dark.png) · [German](images/graphic-mobile-de.png).
 
 ## Expected entities (vallox2mqtt / valloxesp)
 
