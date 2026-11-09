@@ -41,12 +41,12 @@ Supported integrations (auto-discovered):
 
 Requires Home Assistant **2025.1.0** or newer (`hacs.json`).
 
-### HACS (recommended)
+### HACS / Marketplace (recommended)
 
-1. Open **HACS** → ⋮ → **Custom repositories**.
-2. Add `https://github.com/silviuk/vallox-dashboard` with category **Dashboard**.
+1. Open **HACS** or **Marketplace** → ⋮ → **Custom repositories** (wording depends on your Home Assistant version).
+2. Add `https://github.com/silviuk/vallox-dashboard` with category **Dashboard** (API category: `plugin`).
 3. Find **Vallox Dashboard**, download / install the latest release, then **refresh the browser** (no Home Assistant restart).
-4. HACS registers the Lovelace resource `/hacsfiles/vallox-dashboard/vallox-dashboard.js` as a JavaScript module.
+4. The Lovelace resource is registered as a JavaScript module. Classic HACS uses `/hacsfiles/vallox-dashboard/vallox-dashboard.js`; Home Assistant Marketplace (2026.11+) uses `/local/community/vallox-dashboard/vallox-dashboard.js`.
 
 ### Manual
 
