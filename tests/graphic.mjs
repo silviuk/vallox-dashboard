@@ -1,6 +1,19 @@
 import fs from "node:fs";
 
 export async function testGraphic({ api, defined, hass, roles, check, context, vm }) {
+  const css = vm.runInContext("GRAPHIC_CSS", context);
+  // Only these semantic accent declarations may contain non-neutral hex colours.
+  const neutralCss = css
+    .replace(/--(?:cold|warm):#[0-9a-f]{3,8}\b/gi, "")
+    .replace(/var\(--(?:state-active-color|error-color|primary-color),#[0-9a-f]{3,8}\)/gi, "");
+  const tinted = [...neutralCss.matchAll(/#([0-9a-f]{3,8})\b/gi)].filter(([, hex]) => {
+    const rgb = hex.length <= 4 ? hex.slice(0, 3).split("") : hex.slice(0, 6).match(/../g);
+    return !rgb.every(channel => channel.toLowerCase() === rgb[0].toLowerCase());
+  });
+  check(tinted.length === 0, "graphic CSS hex colours are neutral except semantic accents");
+  check(css.includes("--cold:#369ac7; --warm:#df8054;")
+    && css.includes("--active:var(--state-active-color,#e69b28)")
+    && css.includes("var(--primary-color,#369ac7)"), "airflow, amber status and focus accent colours preserved");
   const clone = () => structuredClone(hass);
   const model = (h = hass, config = {}) => api.graphicModel(h, config);
   const render = (view, h = hass, config = {}) => api[view === "controller" ? "renderControllerSvg" : "renderExchangerSvg"](model(h, config));
