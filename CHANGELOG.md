@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3
+
+- Restore the 1.2.1 look and colours for both drawings by user request, keeping the 1.2.2 full-width sizing and upright exchanger structure.
+- Give exchanger fans filled circular backgrounds, move the bypass label clear of the casing edge, and tidy the open bypass route with one right-angle crossing and no recovery badge overlap.
+- Refresh graphic documentation, offline preview version, five screenshots and regression checks.
+
 ## 1.2.2
 
 - Fix phone sections layout: stack full-width graphics with automatic rows; widen the remaining switch-function tile. Use proportional SVG sizing and view-specific masonry estimates.

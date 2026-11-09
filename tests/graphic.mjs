@@ -73,14 +73,23 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
   }
   check(crossing.includes('M210 194V300L250 330') && crossing.includes('M370 194V300L350 330')
     && crossing.includes('M350 498H480V240H510V194') && crossing.includes('M250 498H80V194'), "four separate exterior lanes join cell faces through filters, heaters and fans");
-  check(crossing.includes('M190 284l8 -10') && crossing.includes('M460 280l8 -10'), "pre/post heaters intersect the supply inlet/outlet lanes");
+  check(crossing.includes('M186 284l8 -12 8 24 8 -24 8 24 8 -24 8 12') && crossing.includes('M456 280l8 -12 8 24 8 -24 8 24 8 -24 8 12'), "1.2.1 zigzag heaters intersect the supply inlet/outlet lanes");
   for (const role of ["outdoor","extract","supply","exhaust"]) check(crossing.includes('data-temperature="' + role + '"'), role + ": temperature belongs to its numbered duct");
   const actionRects = [...controller.matchAll(/data-action="(boost|heat|shower)"[^]*?<rect[^>]*x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"/g)];
   check(actionRects.length === 3 && actionRects.every((r) => r[3] === "370" && Number(r[5]) * 294 / 600 >= 40)
     && new Set(actionRects.map((r) => r[2])).size === 3
     && !vm.runInContext("GRAPHIC_CSS", context).includes('.actions [data-action='),
     "three actions share one row with at least 40 px tap height at a 320 px viewport");
-  check(controller.includes('class="housing"') && controller.includes('recessed-lcd') && controller.includes('viewBox="0 0 600 500"') && crossing.includes('viewBox="0 0 600 676"'), "bezel housing and recessed LCD; SVGs use natural proportions");
+  check(controller.includes('class="body" x="24" y="24" width="552" height="452" rx="24"')
+    && controller.includes('class="strip"') && controller.includes('class="lcd"')
+    && [...controller.matchAll(/<rect class="button"[^>]*rx="([^"]+)"/g)].every(r => r[1] === "12")
+    && !/housing|bezel|recessed-lcd|linearGradient/.test(controller)
+    && !/housing|bezel|button-depth/.test(vm.runInContext("GRAPHIC_CSS", context)),
+    "1.2.1 flat controller panel, LCD and rx 12 buttons without depth effects");
+  check(crossing.includes('class="body unit-casing" x="36" y="194" width="528" height="426" rx="24"')
+    && (crossing.match(/<circle class="body" r="32" fill="var\(--surface\)"/g) || []).length === 2
+    && !crossing.includes('class="bezel"'), "upright exchanger uses 1.2.1 rounded casing and circular fan glyphs");
+  check(controller.includes('viewBox="0 0 600 500"') && crossing.includes('viewBox="0 0 600 676"'), "SVGs retain natural proportions");
   check(dash.views[0].strategy.style === "graphic" && dash.views[0].strategy.show.controller === false, "dashboard propagates graphic config");
   const core = JSON.parse(fs.readFileSync(new URL("fixture_core.json", import.meta.url)));
   const coreCards = api.buildSection(core, { style: "graphic" }).cards;
@@ -126,15 +135,22 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
   check(summer.includes('data-bypass-route="supply"') && !summer.includes('data-cell-stream="supply"') && summer.includes('data-cell-stream="extract"'), "summer routes supply around core while extract keeps recovering path");
   const bypassRoute = summer.match(/data-bypass-route="supply"[^>]*d="([^"]+)"/);
   check(summer.includes('d="M210 194V300H170"')
-    && bypassRoute?.[1] === "M170 300V550H100V612H410V574H480"
+    && bypassRoute?.[1] === "M170 300V574H480"
     && summer.includes('d="M480 574V240H510V194"')
     && !summer.includes('d="M250 330L350 498"')
     && !summer.includes('d="M350 498H480V240H510V194"'),
-    "bypass runs after F7/preheater beside the cell, below the badge, through the bottom flap to supply fan and port 3");
+    "bypass runs after F7/preheater beside the cell, across exhaust once at a right angle, through the bottom flap to supply fan and port 3");
+  check(!summer.includes('aria-label="Heat recovery"') && !summer.includes('class="recovery-label"'),
+    "open bypass hides recovery badge and labels for a clear bottom lane");
+  check(summer.includes('d="M250 498H80V194"') && bypassRoute?.[1] === "M170 300V574H480"
+    && 170 - 80 > 14 && 574 - 498 > 14,
+    "bypass vertical crosses horizontal exhaust once at 90 degrees; parallel lanes have over 14 px clearance");
+  check(crossing.includes('x="456" y="608" class="muted"') && summer.includes('x="300" y="608" class="muted"'),
+    "bypass label stays inside casing above its 620 bottom edge, clear of recovery badge");
   const beforeBypassFix = api.renderExchangerSvg.toString()
     .replace('bypass ? "M210 194V300H170" : "M210 194V300L250 330"', '"M210 194V300L250 330"')
     .replace('bypass ? "M480 574V240H510V194" : "M350 498H480V240H510V194"', '"M350 498H480V240H510V194"')
-    .replace('"M170 300V550H100V612H410V574H480"', '"M250 330L300 310L380 378V460L350 498"');
+    .replace('"M170 300V574H480"', '"M250 330L300 310L380 378V460L350 498"');
   check(vm.runInContext("(" + beforeBypassFix + ")", context)(model()) === crossing,
     "winter SVG remains byte-identical to before the bypass fix");
   const texts = JSON.parse(vm.runInContext("JSON.stringify(GRAPHIC_TEXT)", context));
