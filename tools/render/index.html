@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vallox graphic style · offline preview</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px; background:#edf2f5; color:#172d3b; font-family:Arial,sans-serif;
+    --primary-font-family:Arial,sans-serif; --ha-card-background:#fff; --primary-text-color:#172d3b;
+    --secondary-text-color:#526773; --divider-color:#ccd8df; --state-active-color:#d39222; }
+  body.dark { background:#101b23; color:#e2ecf2; --ha-card-background:#1b2a35; --primary-text-color:#e2ecf2;
+    --secondary-text-color:#a2b6c4; --divider-color:#3d5362; --state-active-color:#f3b84d; }
+  header { display:flex; align-items:baseline; justify-content:space-between; margin:0 6px 20px; }
+  h1 { font-size:22px; margin:0; font-weight:500; } p { margin:0; font-size:13px; opacity:.7; }
+  main { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; max-width:1200px; margin:auto; }
+  body.narrow { padding:12px; width:430px; max-width:100%; } body.narrow main { grid-template-columns:minmax(0,1fr); width:100%; max-width:406px; }
+  body.narrow header { display:block; } body.narrow p { margin-top:10px; }
+  @media(max-width:480px) { body { padding:12px; } }
+  @media(max-width:720px) { main { grid-template-columns:1fr; } header { display:block; } p { margin-top:10px; } }
+  #actions { font-size:12px; margin:16px 6px; }
+</style>
+<header><h1>Vallox · Graphic style</h1><p>Original MIT artwork · offline sample · 1.2.0</p></header>
+<main id="cards"></main><div id="actions" role="status"></div>
+<script src="sample-data.js"></script>
+<script src="../../dist/vallox-dashboard.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  document.body.classList.toggle("dark", params.get("theme") === "dark");
+  document.body.classList.toggle("narrow", params.get("layout") === "narrow");
+  const hass = window.valloxGraphicSample;
+  hass.locale = { language: params.get("lang") || "en" };
+  // Deliberately local: taps only record payloads; this harness has no HA connection.
+  hass.callService = async (...args) => { document.querySelector("#actions").textContent = JSON.stringify(args); };
+  if (params.get("variant") === "bypass") hass.states["binary_sensor.ventilation_summer_mode"].state = "on";
+  if (params.get("variant") === "stopped") hass.states["binary_sensor.ventilation"].state = "off";
+  for (const view of params.has("view") ? [params.get("view")] : ["controller", "exchanger"]) {
+    const card = document.createElement("vallox-graphic-card");
+    card.setConfig({ view });
+    card.hass = hass;
+    document.querySelector("#cards").append(card);
+  }
+</script>
+</html>

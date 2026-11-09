@@ -1,0 +1,607 @@
+{
+  "section": {
+    "type": "grid",
+    "cards": [
+      {
+        "type": "heading",
+        "heading": "Vallox RS485 Ventilation",
+        "heading_style": "title",
+        "icon": "mdi:hvac",
+        "badges": [
+          {
+            "type": "entity",
+            "entity": "binary_sensor.ventilation",
+            "show_state": false,
+            "show_icon": true
+          },
+          {
+            "type": "entity",
+            "entity": "sensor.ventilation_outside_temperature",
+            "show_state": true,
+            "show_icon": true
+          },
+          {
+            "type": "entity",
+            "entity": "binary_sensor.ventilation_service_needed",
+            "show_state": true,
+            "show_icon": true,
+            "color": "red",
+            "visibility": [
+              {
+                "condition": "state",
+                "entity": "binary_sensor.ventilation_service_needed",
+                "state": "on"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "markdown",
+        "text_only": true,
+        "visibility": [
+          {
+            "condition": "state",
+            "entity": "binary_sensor.ventilation_service_needed",
+            "state": "on"
+          }
+        ],
+        "content": "<ha-alert alert-type=\"warning\">The unit reports that service (filter change) is due.</ha-alert>"
+      },
+      {
+        "type": "tile",
+        "entity": "climate.ventilation",
+        "grid_options": {
+          "columns": 12
+        },
+        "icon": "mdi:fan",
+        "color": "blue",
+        "state_content": [
+          "fan_mode",
+          "hvac_action"
+        ],
+        "features": [
+          {
+            "type": "climate-fan-modes",
+            "style": "dropdown",
+            "fan_modes": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ]
+          },
+          {
+            "type": "climate-hvac-modes",
+            "hvac_modes": [
+              "heat",
+              "fan_only"
+            ]
+          }
+        ],
+        "name": "Ventilation"
+      },
+      {
+        "type": "tile",
+        "entity": "switch.ventilation_switch",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:rocket-launch",
+        "color": "amber",
+        "name": "Boost / fireplace"
+      },
+      {
+        "type": "tile",
+        "entity": "sensor.ventilation_switch_type",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:gesture-tap-button",
+        "name": "Switch function"
+      },
+      {
+        "type": "heading",
+        "heading": "Air temperatures",
+        "heading_style": "subtitle",
+        "icon": "mdi:thermometer"
+      },
+      {
+        "type": "tile",
+        "entity": "sensor.ventilation_outside_temperature",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:home-import-outline",
+        "color": "teal",
+        "name": "Outdoor air"
+      },
+      {
+        "type": "tile",
+        "entity": "sensor.ventilation_incoming_temperature",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:arrow-right-bold-box-outline",
+        "color": "green",
+        "name": "Supply air"
+      },
+      {
+        "type": "tile",
+        "entity": "sensor.ventilation_inside_temperature",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:home-thermometer-outline",
+        "color": "orange",
+        "name": "Extract air"
+      },
+      {
+        "type": "tile",
+        "entity": "sensor.ventilation_exhaust_temperature",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:home-export-outline",
+        "color": "brown",
+        "name": "Exhaust air"
+      },
+      {
+        "type": "markdown",
+        "grid_options": {
+          "columns": 12
+        },
+        "content": "{% set o = states('sensor.ventilation_outside_temperature') | float(none) %}\n{% set i = states('sensor.ventilation_inside_temperature') | float(none) %}\n{% set x = states('sensor.ventilation_exhaust_temperature') | float(none) %}\n{% if o is not none and i is not none and x is not none and (i - o) >= 4 %}\n{% set eff = ((i - x) / (i - o) * 100) | round(0) | int %}\n<ha-icon icon=\"mdi:heat-wave\"></ha-icon> **Heat recovery (estimate): {{ [0, [eff, 100] | min] | max }} %**\n<small>estimated from extract and exhaust air: (extract − exhaust) ÷ (extract − outdoor)</small>\n{% else %}\n<ha-icon icon=\"mdi:heat-wave\"></ha-icon> Heat recovery: not enough temperature difference for an estimate right now.\n{% endif %}"
+      },
+      {
+        "type": "heading",
+        "heading": "Status",
+        "heading_style": "subtitle",
+        "icon": "mdi:list-status"
+      },
+      {
+        "type": "tile",
+        "entity": "binary_sensor.ventilation_motor_in",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:fan-chevron-down",
+        "color": "blue",
+        "name": "Supply fan"
+      },
+      {
+        "type": "tile",
+        "entity": "binary_sensor.ventilation_motor_out",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:fan-chevron-up",
+        "color": "blue",
+        "name": "Extract fan"
+      },
+      {
+        "type": "tile",
+        "entity": "binary_sensor.ventilation_front_heating",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:radiator",
+        "color": "red",
+        "name": "Pre-heating"
+      },
+      {
+        "type": "tile",
+        "entity": "binary_sensor.ventilation_post_heating",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:radiator",
+        "color": "red",
+        "name": "Post-heating"
+      },
+      {
+        "type": "tile",
+        "entity": "binary_sensor.ventilation_summer_mode",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:weather-sunny",
+        "color": "amber",
+        "name": "Summer mode"
+      },
+      {
+        "type": "heading",
+        "heading": "Filter & service",
+        "heading_style": "subtitle",
+        "icon": "mdi:wrench-clock"
+      },
+      {
+        "type": "tile",
+        "entity": "sensor.ventilation_service_counter",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:calendar-clock",
+        "name": "Service counter"
+      },
+      {
+        "type": "tile",
+        "entity": "binary_sensor.ventilation_service_needed",
+        "grid_options": {
+          "columns": 6
+        },
+        "icon": "mdi:wrench-clock",
+        "name": "Service needed"
+      },
+      {
+        "type": "history-graph",
+        "title": "Air temperatures (48 h)",
+        "hours_to_show": 48,
+        "entities": [
+          {
+            "entity": "sensor.ventilation_outside_temperature",
+            "name": "Outdoor air"
+          },
+          {
+            "entity": "sensor.ventilation_incoming_temperature",
+            "name": "Supply air"
+          },
+          {
+            "entity": "sensor.ventilation_inside_temperature",
+            "name": "Extract air"
+          },
+          {
+            "entity": "sensor.ventilation_exhaust_temperature",
+            "name": "Exhaust air"
+          }
+        ]
+      },
+      {
+        "type": "history-graph",
+        "title": "Activity (24 h)",
+        "hours_to_show": 24,
+        "entities": [
+          {
+            "entity": "switch.ventilation_switch",
+            "name": "Boost / fireplace"
+          },
+          {
+            "entity": "binary_sensor.ventilation_motor_in",
+            "name": "Supply fan"
+          },
+          {
+            "entity": "binary_sensor.ventilation_motor_out",
+            "name": "Extract fan"
+          },
+          {
+            "entity": "binary_sensor.ventilation_front_heating",
+            "name": "Pre-heating"
+          },
+          {
+            "entity": "binary_sensor.ventilation_post_heating",
+            "name": "Post-heating"
+          },
+          {
+            "entity": "binary_sensor.ventilation_summer_mode",
+            "name": "Summer mode"
+          }
+        ]
+      }
+    ]
+  },
+  "view": {
+    "type": "sections",
+    "max_columns": 3,
+    "sections": [
+      {
+        "type": "grid",
+        "cards": [
+          {
+            "type": "heading",
+            "heading": "Vallox RS485 Ventilation",
+            "heading_style": "title",
+            "icon": "mdi:hvac",
+            "badges": [
+              {
+                "type": "entity",
+                "entity": "binary_sensor.ventilation",
+                "show_state": false,
+                "show_icon": true
+              },
+              {
+                "type": "entity",
+                "entity": "sensor.ventilation_outside_temperature",
+                "show_state": true,
+                "show_icon": true
+              },
+              {
+                "type": "entity",
+                "entity": "binary_sensor.ventilation_service_needed",
+                "show_state": true,
+                "show_icon": true,
+                "color": "red",
+                "visibility": [
+                  {
+                    "condition": "state",
+                    "entity": "binary_sensor.ventilation_service_needed",
+                    "state": "on"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "markdown",
+            "text_only": true,
+            "visibility": [
+              {
+                "condition": "state",
+                "entity": "binary_sensor.ventilation_service_needed",
+                "state": "on"
+              }
+            ],
+            "content": "<ha-alert alert-type=\"warning\">The unit reports that service (filter change) is due.</ha-alert>"
+          },
+          {
+            "type": "tile",
+            "entity": "climate.ventilation",
+            "grid_options": {
+              "columns": 12
+            },
+            "icon": "mdi:fan",
+            "color": "blue",
+            "state_content": [
+              "fan_mode",
+              "hvac_action"
+            ],
+            "features": [
+              {
+                "type": "climate-fan-modes",
+                "style": "dropdown",
+                "fan_modes": [
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7",
+                  "8"
+                ]
+              },
+              {
+                "type": "climate-hvac-modes",
+                "hvac_modes": [
+                  "heat",
+                  "fan_only"
+                ]
+              }
+            ],
+            "name": "Ventilation"
+          },
+          {
+            "type": "tile",
+            "entity": "switch.ventilation_switch",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:rocket-launch",
+            "color": "amber",
+            "name": "Boost / fireplace"
+          },
+          {
+            "type": "tile",
+            "entity": "sensor.ventilation_switch_type",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:gesture-tap-button",
+            "name": "Switch function"
+          },
+          {
+            "type": "heading",
+            "heading": "Air temperatures",
+            "heading_style": "subtitle",
+            "icon": "mdi:thermometer"
+          },
+          {
+            "type": "tile",
+            "entity": "sensor.ventilation_outside_temperature",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:home-import-outline",
+            "color": "teal",
+            "name": "Outdoor air"
+          },
+          {
+            "type": "tile",
+            "entity": "sensor.ventilation_incoming_temperature",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:arrow-right-bold-box-outline",
+            "color": "green",
+            "name": "Supply air"
+          },
+          {
+            "type": "tile",
+            "entity": "sensor.ventilation_inside_temperature",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:home-thermometer-outline",
+            "color": "orange",
+            "name": "Extract air"
+          },
+          {
+            "type": "tile",
+            "entity": "sensor.ventilation_exhaust_temperature",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:home-export-outline",
+            "color": "brown",
+            "name": "Exhaust air"
+          },
+          {
+            "type": "markdown",
+            "grid_options": {
+              "columns": 12
+            },
+            "content": "{% set o = states('sensor.ventilation_outside_temperature') | float(none) %}\n{% set i = states('sensor.ventilation_inside_temperature') | float(none) %}\n{% set x = states('sensor.ventilation_exhaust_temperature') | float(none) %}\n{% if o is not none and i is not none and x is not none and (i - o) >= 4 %}\n{% set eff = ((i - x) / (i - o) * 100) | round(0) | int %}\n<ha-icon icon=\"mdi:heat-wave\"></ha-icon> **Heat recovery (estimate): {{ [0, [eff, 100] | min] | max }} %**\n<small>estimated from extract and exhaust air: (extract − exhaust) ÷ (extract − outdoor)</small>\n{% else %}\n<ha-icon icon=\"mdi:heat-wave\"></ha-icon> Heat recovery: not enough temperature difference for an estimate right now.\n{% endif %}"
+          },
+          {
+            "type": "heading",
+            "heading": "Status",
+            "heading_style": "subtitle",
+            "icon": "mdi:list-status"
+          },
+          {
+            "type": "tile",
+            "entity": "binary_sensor.ventilation_motor_in",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:fan-chevron-down",
+            "color": "blue",
+            "name": "Supply fan"
+          },
+          {
+            "type": "tile",
+            "entity": "binary_sensor.ventilation_motor_out",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:fan-chevron-up",
+            "color": "blue",
+            "name": "Extract fan"
+          },
+          {
+            "type": "tile",
+            "entity": "binary_sensor.ventilation_front_heating",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:radiator",
+            "color": "red",
+            "name": "Pre-heating"
+          },
+          {
+            "type": "tile",
+            "entity": "binary_sensor.ventilation_post_heating",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:radiator",
+            "color": "red",
+            "name": "Post-heating"
+          },
+          {
+            "type": "tile",
+            "entity": "binary_sensor.ventilation_summer_mode",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:weather-sunny",
+            "color": "amber",
+            "name": "Summer mode"
+          },
+          {
+            "type": "heading",
+            "heading": "Filter & service",
+            "heading_style": "subtitle",
+            "icon": "mdi:wrench-clock"
+          },
+          {
+            "type": "tile",
+            "entity": "sensor.ventilation_service_counter",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:calendar-clock",
+            "name": "Service counter"
+          },
+          {
+            "type": "tile",
+            "entity": "binary_sensor.ventilation_service_needed",
+            "grid_options": {
+              "columns": 6
+            },
+            "icon": "mdi:wrench-clock",
+            "name": "Service needed"
+          }
+        ]
+      },
+      {
+        "type": "grid",
+        "cards": [
+          {
+            "type": "heading",
+            "heading": "Ventilation history",
+            "heading_style": "title",
+            "icon": "mdi:chart-line"
+          },
+          {
+            "type": "history-graph",
+            "title": "Air temperatures (48 h)",
+            "hours_to_show": 48,
+            "entities": [
+              {
+                "entity": "sensor.ventilation_outside_temperature",
+                "name": "Outdoor air"
+              },
+              {
+                "entity": "sensor.ventilation_incoming_temperature",
+                "name": "Supply air"
+              },
+              {
+                "entity": "sensor.ventilation_inside_temperature",
+                "name": "Extract air"
+              },
+              {
+                "entity": "sensor.ventilation_exhaust_temperature",
+                "name": "Exhaust air"
+              }
+            ]
+          },
+          {
+            "type": "history-graph",
+            "title": "Activity (24 h)",
+            "hours_to_show": 24,
+            "entities": [
+              {
+                "entity": "switch.ventilation_switch",
+                "name": "Boost / fireplace"
+              },
+              {
+                "entity": "binary_sensor.ventilation_motor_in",
+                "name": "Supply fan"
+              },
+              {
+                "entity": "binary_sensor.ventilation_motor_out",
+                "name": "Extract fan"
+              },
+              {
+                "entity": "binary_sensor.ventilation_front_heating",
+                "name": "Pre-heating"
+              },
+              {
+                "entity": "binary_sensor.ventilation_post_heating",
+                "name": "Post-heating"
+              },
+              {
+                "entity": "binary_sensor.ventilation_summer_mode",
+                "name": "Summer mode"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
