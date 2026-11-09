@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.2.2";
+const VALLOX_DASHBOARD_VERSION = "1.2.3";
 
 const TEXT = {
   en: {
@@ -451,11 +451,8 @@ const GRAPHIC_CSS = `
     border:1px solid var(--line); box-shadow:none; container-type:inline-size; }
   svg { display:block; width:100%; height:auto; font-family:inherit; }
   text { fill:currentColor; font-size:20px; } .muted { fill:var(--muted); font-size:20px; }
+  .duct { fill:var(--surface); stroke:var(--line); stroke-width:2; }
   .body,.button { fill:var(--surface); stroke:var(--line); stroke-width:2; }
-  .housing { fill:url(#housing-depth); stroke:var(--muted); stroke-width:2; }
-  .bezel { fill:none; stroke:var(--line); stroke-width:3; }
-  .button { fill:url(#button-depth); stroke:var(--muted); }
-  .duct { fill:var(--surface); stroke:var(--muted); stroke-width:2; }
   .strip { fill:var(--line); opacity:.35; } .lcd { fill:var(--line); fill-opacity:.22; stroke:var(--line); }
   .big { font-size:64px; font-weight:600; letter-spacing:-3px; }
   .title { font-size:24px; font-weight:600; } .value { font-size:28px; font-weight:600; }
@@ -485,7 +482,7 @@ const svgText = (x, y, text, cls = "", anchor = "start") =>
   `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${escapeGraphic(text)}</text>`;
 function graphicButton(x, y, w, h, label, action, disabled = false, glyph = label) {
   return `<g role="button" tabindex="${disabled ? -1 : 0}" aria-label="${escapeGraphic(label)}" aria-disabled="${disabled}" data-action="${action}">
-    <rect class="button" x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) / 2}"/>
+    <rect class="button" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/>
     ${["increase", "decrease"].includes(action)
       ? `<path class="control-symbol" d="M${x + w / 2 - 16} ${y + h / 2}h32${action === "increase" ? `M${x + w / 2} ${y + h / 2 - 16}v32` : ""}"/>`
       : svgText(x + w / 2, y + h / 2 + 7, glyph, "", "middle")}</g>`;
@@ -510,10 +507,7 @@ function renderControllerSvg(m) {
   const displayY = 106 + Math.ceil(leds.length / 3) * 34;
   const actionsY = displayY + 180 + 16;
   const height = actionsY + 82 + 48;
-  let content = `<defs>
-    <linearGradient id="housing-depth" x2="0" y2="1"><stop stop-color="var(--surface)"/><stop offset="1" stop-color="var(--line)"/></linearGradient>
-    <linearGradient id="button-depth" x2="0" y2="1"><stop stop-color="var(--surface)"/><stop offset="1" stop-color="var(--line)"/></linearGradient>
-    </defs><rect class="housing" x="24" y="24" width="552" height="${height - 48}" rx="32"/><rect class="bezel" x="32" y="32" width="536" height="${height - 64}" rx="26"/>
+  let content = `<rect class="body" x="24" y="24" width="552" height="${height - 48}" rx="24"/>
     <path class="strip" d="M52 24H548Q576 24 576 52V88H24V52Q24 24 52 24Z"/>`
     + svgText(48, 63, m.unit.name, "title");
   content += leds.map(([, label, active], i) => {
@@ -521,7 +515,7 @@ function renderControllerSvg(m) {
     return `<circle cx="${x}" cy="${y - 6}" r="6" class="led ${active ? "lit" : ""}"><title>${escapeGraphic(label)}</title></circle>`
       + svgText(x + 14, y, active === null ? `${label} —` : label, "muted");
   }).join("");
-  content += `<g transform="translate(0 ${displayY - 174})"><rect class="lcd recessed-lcd" x="48" y="174" width="504" height="180" rx="18"/>`
+  content += `<g transform="translate(0 ${displayY - 174})"><rect class="lcd" x="48" y="174" width="504" height="180" rx="18"/>`
     + svgText(72, 202, e.climate ? t.fan_speed : g.core_fan, "muted")
     + svgText(300, 267, e.climate ? `${m.level ?? "—"} / ${m.max}` :
       (m.fanPercentage ?? m.formatted("fan_speed", " %")), "big", "middle");
@@ -547,8 +541,7 @@ function renderExchangerSvg(m) {
   const { e, t, g } = m, bypass = m.on("summer_mode");
   const cell = "M300 288L400 372V456L300 540L200 456V372Z";
   let content = svgText(32, 38, g.exchanger, "title") + svgText(32, 66, m.unit.name, "muted")
-    + '<rect class="body unit-casing" x="36" y="194" width="528" height="426" rx="12"/>'
-    + '<rect class="bezel" x="47" y="205" width="506" height="404" rx="6"/>'
+    + '<rect class="body unit-casing" x="36" y="194" width="528" height="426" rx="24"/>'
     + '<defs><linearGradient id="extract-gradient" gradientUnits="userSpaceOnUse" x1="350" y1="330" x2="250" y2="498"><stop stop-color="var(--warm)"/><stop offset="1" stop-color="var(--cold)"/></linearGradient>'
     + '<linearGradient id="supply-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="350" y2="498"><stop stop-color="var(--cold)"/><stop offset="1" stop-color="var(--warm)"/></linearGradient></defs>'
     + '<path data-component="cell" class="cell" d="' + cell + '"/>';
@@ -561,8 +554,8 @@ function renderExchangerSvg(m) {
     + stream("exhaust", "M250 498H80V194", "cold", "motor_out")
     + stream("extract", "M350 330L250 498", "", "motor_out", true);
   if (bypass) {
-    // Keep the inlet beside the cell, then pass below the recovery badge to the bottom flap.
-    content += stream("supply", "M170 300V550H100V612H410V574H480", "cold", "motor_in", false, 'data-bypass-route="supply"');
+    // One right-angle crossing of the exhaust lane; keep parallel lanes well apart.
+    content += stream("supply", "M170 300V574H480", "cold", "motor_in", false, 'data-bypass-route="supply"');
   } else content += stream("supply", "M250 330L350 498", "", "motor_in", true);
   const ducts = [["exhaust",4,80,false],["outdoor",1,210,true],["extract",2,370,true],["supply",3,510,false]];
   for (const [role, number, x, incoming] of ducts) {
@@ -579,17 +572,17 @@ function renderExchangerSvg(m) {
   };
   if (e.outdoor) content += filter("F7",210,240,"supply");
   if (e.extract) content += filter("G3",370,240,"extract");
-  const fan = (role, x, y, streamName) => !e[role] ? "" : '<g data-fan="' + role + '" data-on-stream="' + streamName + '" transform="translate(' + x + ' ' + y + ')"><rect class="body" x="-41" y="-41" width="82" height="82" rx="18"/>'
-    + '<circle class="duct" r="32"/><g data-motor="' + role + '" class="' + (m.running(role) ? 'spin' : 'stopped') + '"><path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/></g><circle r="5" fill="var(--surface)"/></g>';
+  const fan = (role, x, y, streamName) => !e[role] ? "" : '<g data-fan="' + role + '" data-on-stream="' + streamName + '" transform="translate(' + x + ' ' + y + ')"><circle class="body" r="32" fill="var(--surface)"/>'
+    + '<g data-motor="' + role + '" class="' + (m.running(role) ? 'spin' : 'stopped') + '"><path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/></g><circle r="4" fill="var(--surface)"/></g>';
   content += fan("motor_in",480,390,"supply") + fan("motor_out",110,498,"extract")
     + '<path class="cell-outline" d="' + cell + '"/>';
-  const heater = (role, x, y) => !e[role] ? "" : '<g data-on-stream="supply"><title>' + escapeGraphic(t[role]) + '</title><path data-heater="' + role + '" class="heater ' + (m.on(role) ? 'hot' : '') + '" d="M' + (x-20) + ' ' + y + 'l8 -10 8 20 8 -20 8 20 8 -10"/></g>';
+  const heater = (role, x, y) => !e[role] ? "" : '<g data-on-stream="supply"><title>' + escapeGraphic(t[role]) + '</title><path data-heater="' + role + '" class="heater ' + (m.on(role) ? 'hot' : '') + '" d="M' + (x-24) + ' ' + y + 'l8 -12 8 24 8 -24 8 24 8 -24 8 12"/></g>';
   content += heater("front_heating",210,284) + heater("post_heating",480,280);
-  if (e.efficiency || [e.outdoor,e.extract,e.exhaust].every(Boolean)) content += '<g aria-label="' + escapeGraphic(t.efficiency) + '"><rect class="cell" x="244" y="552" width="112" height="54" rx="10"/>'
+  if (!bypass && (e.efficiency || [e.outdoor,e.extract,e.exhaust].every(Boolean))) content += '<g aria-label="' + escapeGraphic(t.efficiency) + '"><rect class="cell" x="244" y="552" width="112" height="54" rx="10"/>'
     + g.recovery_label.map((label,i) => svgText(234,572+i*22,label,"recovery-label","end")).join("")
     + svgText(300,587,m.efficiency === null ? "—" : Math.round(m.efficiency)+" %","value","middle") + '</g>';
   if (e.summer_mode) content += '<g data-bypass="' + (bypass ? 'open' : 'closed') + '"><circle class="led" cx="410" cy="574" r="5"/><path class="heater ' + (bypass ? 'hot' : '') + '" d="' + (bypass ? 'M410 574l22 -20' : 'M410 574h28') + '"/></g>'
-    + svgText(300,630,m.value("summer_mode") === null ? g.bypass + " —" : bypass ? g.bypass_open : g.bypass_closed,"muted","middle");
+    + svgText(bypass ? 300 : 456,608,m.value("summer_mode") === null ? g.bypass + " —" : bypass ? g.bypass_open : g.bypass_closed,"muted","middle");
   if (m.config.show_status !== false) {
     if (e.climate || e.fan_speed || e.fan) content += '<g aria-label="' + escapeGraphic(t.fan_speed) + '">' + svgText(32,655,(e.climate ? (m.level ?? "—")+" / "+m.max : m.fanPercentage ?? m.formatted("fan_speed"," %")),"muted") + '</g>';
     if (m.boost && m.config.show?.boost_remaining !== false) content += svgText(568,655,g.boost+' · '+(e.boost_remaining ? m.formatted("boost_remaining",' '+t.minutes) : g.active),"muted","end");
