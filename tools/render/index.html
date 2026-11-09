@@ -19,7 +19,7 @@
   @media(max-width:720px) { main { grid-template-columns:1fr; } header { display:block; } p { margin-top:10px; } }
   #actions { font-size:12px; margin:16px 6px; }
 </style>
-<header><h1>Vallox · Graphic style</h1><p>Original MIT artwork · offline sample · 1.2.0</p></header>
+<header><h1>Vallox · Graphic style</h1><p>Original MIT artwork · offline sample · 1.2.1</p></header>
 <main id="cards"></main><div id="actions" role="status"></div>
 <script src="sample-data.js"></script>
 <script src="../../dist/vallox-dashboard.js"></script>
@@ -35,7 +35,7 @@
   if (params.get("variant") === "stopped") hass.states["binary_sensor.ventilation"].state = "off";
   for (const view of params.has("view") ? [params.get("view")] : ["controller", "exchanger"]) {
     const card = document.createElement("vallox-graphic-card");
-    card.setConfig({ view });
+    card.setConfig({ view, show_status: params.has("view") });
     card.hass = hass;
     document.querySelector("#cards").append(card);
   }

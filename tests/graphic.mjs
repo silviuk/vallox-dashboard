@@ -9,6 +9,12 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
     const cards = result.cards || result.sections[0].cards;
     check(cards[1].view === "controller" && cards[2].view === "exchanger"
       && cards.slice(1, 3).every((c) => c.type === "custom:vallox-graphic-card"), builder.name + ": graphics lead overview");
+    check(cards[2].show_status === false && !render("exchanger", hass, cards[2]).includes('aria-label="Fan speed"'),
+      builder.name + ": controller suppresses duplicate exchanger status");
+    const alone = builder(hass, { style: "graphic", show: { controller: false } });
+    const exchanger = (alone.cards || alone.sections[0].cards).find((c) => c.view === "exchanger");
+    check(exchanger.show_status === true && render("exchanger", hass, exchanger).includes('aria-label="Fan speed"'),
+      builder.name + ": exchanger alone shows fan status");
     check(!cards.some((c) => c.entity === roles.climate || c.entity === roles.outdoor || c.entity === roles.motor_in),
       builder.name + ": duplicate tiles removed");
     check(cards.some((c) => c.entity === roles.fault_code) && cards.some((c) => c.entity === roles.bypass_setpoint)
@@ -19,6 +25,35 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
     }
   }
   const dash = await defined["ll-strategy-dashboard-vallox-ventilation"].generate({ style: "graphic", show: { controller: false } }, hass);
+  const activeBoost = clone(); activeBoost.states[roles.boost_remaining].state = "12";
+  const controller = render("controller", activeBoost);
+  check((controller.match(/<text[^>]*>Boost 12 min<\/text>/g) || []).length === 1
+    && !controller.includes("Built-in boost time left"), "controller shows boost countdown once, without footer");
+  check(render("exchanger", activeBoost).includes("Boost · 12 min")
+    && render("exchanger", activeBoost).includes('aria-label="Fan speed"')
+    && !render("exchanger", activeBoost, { show_status: false }).includes("Boost · 12 min")
+    && !render("exchanger", activeBoost, { show_status: false }).includes('aria-label="Fan speed"'),
+    "standalone status defaults on; show_status hides fan and boost badges");
+  const crossing = render("exchanger");
+  const paths = [...crossing.matchAll(/data-cell-stream="([^"]+)"[^>]*d="([^"]+)"/g)];
+  check(paths.length === 2 && ["extract", "supply"].every((name) => paths.filter((p) => p[1] === name).length === 1)
+    && crossing.includes('d="M250 260L350 360"') && crossing.includes('d="M250 360L350 260"')
+    && crossing.includes('d="M220 156V230L250 260"') && crossing.includes('d="M350 360L410 420H80V156"')
+    && crossing.includes('d="M520 156V440H180L250 360"') && crossing.includes('d="M350 260L480 232V184H380V156"'),
+    "exactly two bands cross opposite cell faces; return ducts clear the cell");
+  check(crossing.includes('id="extract-gradient"') && crossing.includes('id="supply-gradient"')
+    && crossing.includes('x="92" y="216" width="118" height="80"'), "stream gradients retained; recovery badge sits left of cell clear of ducts");
+  check((crossing.match(/class="cell" d=/g) || []).length === 1
+    && crossing.includes('class="cell-outline" d="M300 210L400 310L300 410L200 310Z"')
+    && crossing.indexOf('class="cell-outline"') > crossing.lastIndexOf('data-stream='),
+    "single cell silhouette has a crisp outline above the streams");
+  const actionRects = [...controller.matchAll(/data-action="(boost|heat|shower)"[^]*?<rect[^>]*x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"/g)];
+  check(actionRects.length === 3 && actionRects.every((r) => r[3] === "370" && Number(r[5]) * 294 / 600 >= 40)
+    && new Set(actionRects.map((r) => r[2])).size === 3
+    && !vm.runInContext("GRAPHIC_CSS", context).includes('.actions [data-action='),
+    "three actions share one row with at least 40 px tap height at a 320 px viewport");
+  check(controller.includes('height="452" rx="24"') && controller.includes('viewBox="0 0 600 500"')
+    && crossing.includes('viewBox="0 0 600 500"'), "equal card heights; controller action bottom padding equals 24 px side padding");
   check(dash.views[0].strategy.style === "graphic" && dash.views[0].strategy.show.controller === false, "dashboard propagates graphic config");
   const core = JSON.parse(fs.readFileSync(new URL("fixture_core.json", import.meta.url)));
   const coreCards = api.buildSection(core, { style: "graphic" }).cards;

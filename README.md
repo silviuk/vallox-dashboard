@@ -232,10 +232,15 @@ view: controller # or exchanger
 The card uses existing integration discovery, `device_id`, `name` and `entities` overrides
 (including `null` to suppress a role). No entity configuration is needed on vallox2mqtt.
 The direct card picks the first selected unit. Strategy cards carry the selected unit's mappings.
+Exchanger option `show_status` defaults to `true`: fan level appears beside the supply fan
+and active boost at the top right, inside the graphic. The strategy sets `show_status: false`
+when its controller is also shown, and `true` when `show.controller: false`. Alarms remain
+visible independently. Set `show_status: false` on a direct exchanger to hide these badges.
+
 The card picker lists **Vallox graphic**; change `view` in YAML to select the exchanger.
 
 The digital panel shows a read-only power indicator and available heater, bypass, service,
-alarm, CO₂ and humidity indicators. Its LCD shows fan level and a secondary readout;
+alarm, CO₂ and humidity indicators. Its LCD shows fan level with adjacent −/+ controls and a secondary readout;
 ▲/▼ cycle available temperatures, recovery, built-in boost time and fault code locally.
 The +/− buttons call `climate.set_fan_mode` with string modes from `"1"` to `"8"`,
 bounded by the advertised `fan_modes` and `maximum_fan_speed`. Sparse advertised modes
@@ -249,6 +254,10 @@ The exchanger is an abstract front-view schematic: four top ducts, a tall centra
 extract fan lower left, supply fan right, pre-heater beside the F7 outdoor filter at
 lower right, post-heater on the supply side, and a bottom bypass flap.
 It is an orientation aid, not an installation or physical duct-routing diagram.
+The streams cross the full cell between opposite faces through parallel diagonal channels;
+warm/cold gradients show the temperature change, with the heat recovery badge beside the cell.
+Action buttons sit in one row of three on desktop and phones (at least 40 px high at the
+documented 430 px phone layout; labels shorten on narrow cards). Boost time appears on its button.
 Directional dashed streams and fan animation follow fan level and stop when the unit
 or the corresponding motor is off. Reduced-motion preferences disable all animation.
 Temperatures, recovery, heating, bypass, boost and alarm highlights update from HA states.

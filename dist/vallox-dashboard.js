@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.2.0";
+const VALLOX_DASHBOARD_VERSION = "1.2.1";
 
 const TEXT = {
   en: {
@@ -373,13 +373,15 @@ const GRAPHIC_TEXT = {
     next: "Next readout", increase: "Increase fan level", decrease: "Decrease fan level",
     readout: "Readout", bypass: "Bypass", filter_f7: "Outdoor filter · F7", active: "Active",
     action_error: "Action failed", core_fan: "Fan speed", freeze: "Cell freeze",
-    boost: "Boost", bypass_open: "Bypass open", bypass_closed: "Bypass closed" },
+    boost: "Boost", heat_action: "Heating", shower_action: "Shower", minutes: "min",
+    recovery_label: ["Heat", "recovery"], bypass_open: "Bypass open", bypass_closed: "Bypass closed" },
   de: { controller: "Digitalregler", exchanger: "Wärmetauscher", power: "Betrieb",
     heating: "Heizbetrieb", filter: "Wartung", alarm: "Alarm", previous: "Vorherige Anzeige",
     next: "Nächste Anzeige", increase: "Lüfterstufe erhöhen", decrease: "Lüfterstufe senken",
     readout: "Anzeige", bypass: "Bypass", filter_f7: "Außenfilter · F7", active: "Aktiv",
     action_error: "Aktion fehlgeschlagen", core_fan: "Lüfterleistung", freeze: "Tauscherfrost",
-    boost: "Boost", bypass_open: "Bypass offen", bypass_closed: "Bypass geschlossen" },
+    boost: "Boost", heat_action: "Heizen", shower_action: "Duschen", minutes: "Min",
+    recovery_label: ["Wärmerück-", "gewinnung"], bypass_open: "Bypass offen", bypass_closed: "Bypass geschlossen" },
 };
 const escapeGraphic = (value) => String(value).replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -446,7 +448,7 @@ const GRAPHIC_CSS = `
     --surface:var(--ha-card-background,var(--card-background-color,#fff));
     --active:var(--state-active-color,#e69b28); --cold:#369ac7; --warm:#df8054; }
   ha-card { display:block; background:var(--surface); border-radius:20px; overflow:hidden;
-    border:1px solid var(--line); box-shadow:none; }
+    border:1px solid var(--line); box-shadow:none; container-type:inline-size; }
   svg { display:block; width:100%; height:auto; font-family:inherit; }
   text { fill:currentColor; font-size:20px; } .muted { fill:var(--muted); font-size:20px; }
   .body,.button { fill:var(--surface); stroke:var(--line); stroke-width:2; }
@@ -466,7 +468,12 @@ const GRAPHIC_CSS = `
   .heater { stroke:var(--line); fill:none; stroke-width:4; } .hot { stroke:var(--active); }
   .cell { fill:var(--surface); stroke:var(--line); stroke-width:2; }
   .fin { stroke:var(--line); stroke-width:2; opacity:.7; } .badge { fill:var(--line); fill-opacity:.35; }
+  .plate { fill:none; stroke:var(--muted); stroke-width:1; opacity:.18; }
+  .cell-outline { fill:none; stroke:var(--muted); stroke-width:2; }
+  .component { fill:var(--muted); font-size:16px; }
+  .recovery-label { fill:var(--muted); font-size:20px; }
   .error { padding:0 20px 12px; color:var(--error-color,#db625a); font-size:12px; }
+  .error:empty { display:none; }
   @keyframes flow { to { stroke-dashoffset:-36; } } @keyframes spin { to { transform:rotate(360deg); } }
   @media(prefers-reduced-motion:reduce) { .flow,.spin { animation:none!important; } }
 `;
@@ -479,7 +486,7 @@ function graphicButton(x, y, w, h, label, action, disabled = false, glyph = labe
       ? `<path class="control-symbol" d="M${x + w / 2 - 16} ${y + h / 2}h32${action === "increase" ? `M${x + w / 2} ${y + h / 2 - 16}v32` : ""}"/>`
       : svgText(x + w / 2, y + h / 2 + 7, glyph, "", "middle")}</g>`;
 }
-function graphicSvg(title, content, duration, height = 760) {
+function graphicSvg(title, content, duration, height = 500) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 ${height}" role="group"
     aria-label="${escapeGraphic(title)}" style="--speed:${duration}"><title>${escapeGraphic(title)}</title>${content}</svg>`;
 }
@@ -496,91 +503,102 @@ function renderControllerSvg(m) {
     [e.co2, t.co2, m.number("co2") !== null ? true : null],
     [e.humidity || e.humidity_2, t.humidity, m.number("humidity") !== null || m.number("humidity_2") !== null ? true : null],
   ].filter(([present]) => present);
-  let content = `<rect class="body" x="24" y="24" width="552" height="712" rx="28"/>
+  const displayY = 106 + Math.ceil(leds.length / 3) * 34;
+  const actionsY = displayY + 180 + 16;
+  const height = actionsY + 82 + 48;
+  let content = `<rect class="body" x="24" y="24" width="552" height="${height - 48}" rx="24"/>
     <path class="strip" d="M52 24H548Q576 24 576 52V88H24V52Q24 24 52 24Z"/>`
     + svgText(48, 63, m.unit.name, "title");
   content += leds.map(([, label, active], i) => {
-    const x = 56 + (i % 3) * 168, y = 120 + Math.floor(i / 3) * 38;
+    const x = 56 + (i % 3) * 168, y = 116 + Math.floor(i / 3) * 34;
     return `<circle cx="${x}" cy="${y - 6}" r="6" class="led ${active ? "lit" : ""}"><title>${escapeGraphic(label)}</title></circle>`
       + svgText(x + 14, y, active === null ? `${label} —` : label, "muted");
   }).join("");
-  content += `<rect class="lcd" x="48" y="222" width="504" height="196" rx="18"/>`
-    + svgText(72, 252, e.climate ? t.fan_speed : g.core_fan, "muted")
-    + svgText(72, 322, e.climate ? `${m.level ?? "—"} / ${m.max}` :
-      (m.fanPercentage ?? m.formatted("fan_speed", " %")), "big");
+  content += `<g transform="translate(0 ${displayY - 174})"><rect class="lcd" x="48" y="174" width="504" height="180" rx="18"/>`
+    + svgText(72, 202, e.climate ? t.fan_speed : g.core_fan, "muted")
+    + svgText(300, 267, e.climate ? `${m.level ?? "—"} / ${m.max}` :
+      (m.fanPercentage ?? m.formatted("fan_speed", " %")), "big", "middle");
   const readout = m.readouts[m.selected];
-  if (readout) content += svgText(72, 362, readout[0], "muted") + svgText(72, 398, readout[1], "value");
-  if (m.readouts.length > 1) content += graphicButton(476, 336, 52, 32, g.previous, "previous", false, "▲")
-    + graphicButton(476, 376, 52, 32, g.next, "next", false, "▼");
-  if (m.canFan) content += graphicButton(48, 434, 240, 60, g.decrease, "decrease", !m.modes.some((v) => Number(v) < m.level), "−")
-    + graphicButton(312, 434, 240, 60, g.increase, "increase", !m.modes.some((v) => Number(v) > m.level), "+");
+  if (readout) content += svgText(72, 310, readout[0], "muted") + svgText(72, 338, readout[1], "value");
+  if (m.readouts.length > 1) content += graphicButton(400, 286, 60, 60, g.previous, "previous", false, "▲")
+    + graphicButton(472, 286, 60, 60, g.next, "next", false, "▼");
+  if (m.canFan) content += graphicButton(72, 210, 76, 66, g.decrease, "decrease", !m.modes.some((v) => Number(v) < m.level), "−")
+    + graphicButton(452, 210, 76, 66, g.increase, "increase", !m.modes.some((v) => Number(v) > m.level), "+");
+  content += '</g>';
   const actions = [];
-  if (e.boost_switch) actions.push([m.boost ? `${g.boost} · ${e.boost_remaining && m.config.show?.boost_remaining !== false ? m.formatted("boost_remaining", ` ${t.minutes}`) : g.active}` : t.boost_switch, "boost",
+  if (e.boost_switch) actions.push([m.boost ? `${g.boost} ${e.boost_remaining && m.config.show?.boost_remaining !== false ? m.formatted("boost_remaining", ` ${g.minutes}`) : g.active}` : g.boost, "boost",
     m.boost || !graphicAvailable(m.hass?.states[e.boost_switch])]);
-  if (m.canHeat) actions.push([g.heating, "heat", false]);
-  if (e.shower_boost && m.preset && m.config.show?.shower_boost !== false) actions.push([t.shower_boost, "shower",
+  if (m.canHeat) actions.push([g.heat_action, "heat", false]);
+  if (e.shower_boost && m.preset && m.config.show?.shower_boost !== false) actions.push([g.shower_action, "shower",
     !graphicAvailable(m.hass.states[e.shower_boost])]);
-  content += actions.map(([label, action, disabled], i) => graphicButton(48, 510 + i * 58, 504, 48, label, action, disabled)).join("");
-  if (m.boost && e.boost_remaining && m.config.show?.boost_remaining !== false) {
-    content += svgText(300, 714, `${t.boost_remaining}: ${m.formatted("boost_remaining", ` ${t.minutes}`)}`, "muted", "middle");
-  }
-  return graphicSvg(g.controller, content, m.duration);
+  content += '<g class="actions">' + actions.map(([label, action, disabled]) =>
+    graphicButton(48 + actions.findIndex((item) => item[1] === action) * 172, actionsY, 160, 82, label, action, disabled)).join("") + '</g>';
+  return graphicSvg(g.controller, content, m.duration, height);
 }
 
 function renderExchangerSvg(m) {
   const { e, t, g } = m;
   const bypass = m.on("summer_mode");
-  let content = svgText(32, 40, g.exchanger, "title") + svgText(32, 72, m.unit.name, "muted")
-    + '<rect class="body" x="30" y="178" width="540" height="456" rx="24"/>'
-    + '<path class="cell" d="M300 234L390 300V410L300 476L210 410V300Z"/>';
-  for (let y = 300; y <= 410; y += 14) content += `<path class="fin" d="M220 ${y}H380"/>`;
-  // Continuous diagonals cross inside the cell, beneath the recovery label.
+  let content = svgText(32, 40, g.exchanger, "title") + svgText(32, 70, m.unit.name, "muted")
+    + '<rect class="body" x="30" y="156" width="540" height="320" rx="24"/>'
+    + '<defs><linearGradient id="extract-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="260" x2="350" y2="360"><stop stop-color="var(--warm)"/><stop offset="1" stop-color="var(--cold)"/></linearGradient>'
+    + '<linearGradient id="supply-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="360" x2="350" y2="260"><stop stop-color="var(--cold)"/><stop offset="1" stop-color="var(--warm)"/></linearGradient></defs>'
+    + '<path class="cell" d="M300 210L400 310L300 410L200 310Z"/>';
+  for (let offset = -30; offset <= 30; offset += 15) {
+    content += '<path class="plate" d="M' + (250 + offset) + ' ' + (260 - offset) + 'L' + (350 + offset) + ' ' + (360 - offset) + '"/>';
+  }
+  // Opposite faces: NW → SE extract/exhaust, SW → NE outdoor/supply.
+  // One soft band and one animated dash line per stream, face to opposite face.
+  const channels = (name, from, to, motor) => {
+    const path = 'M' + from[0] + ' ' + from[1] + 'L' + to[0] + ' ' + to[1];
+    return '<g style="stroke:url(#' + name + '-gradient)"><path class="pipe" d="' + path + '"/>'
+      + '<path data-cell-stream="' + name + '" class="flow ' + (m.running(motor) ? '' : 'stopped') + '" d="' + path + '"/></g>';
+  };
+  content += channels("extract", [250, 260], [350, 360], "motor_out");
+  if (!bypass) content += channels("supply", [250, 360], [350, 260], "motor_in");
   const ducts = [
-    ["outdoor", 520, bypass ? "M520 178V550H180V220H380V178" : "M520 178V550H420L300 354", "cold", "motor_in", true],
-    ["supply", 380, bypass ? "M380 220H450V198H380V178" : "M300 354L450 290V198H380V178", bypass ? "cold" : "warm", "motor_in", false],
-    ["extract", 220, "M220 178V250L300 354", "warm", "motor_out", true],
-    ["exhaust", 80, "M300 354L180 510H80V178", "cold", "motor_out", false],
+    ["outdoor", 520, bypass ? "M520 156V440H170V212H380V156" : "M520 156V440H180L250 360", "cold", "motor_in", true],
+    ["supply", 380, bypass ? "M380 212H480V184H380V156" : "M350 260L480 232V184H380V156", bypass ? "cold" : "warm", "motor_in", false],
+    ["extract", 220, "M220 156V230L250 260", "warm", "motor_out", true],
+    ["exhaust", 80, "M350 360L410 420H80V156", "cold", "motor_out", false],
   ];
   content += ducts.filter(([r]) => e[r]).map(([r, x, path, color, motor, incoming]) =>
-    svgText(x, 116, t[r], "muted", "middle") + svgText(x, 150, m.formatted(r, " °C"), "value", "middle")
-    + `<path class="direction" aria-label="${incoming ? "↓" : "↑"}" d="${incoming ? `M${x + 40} 132v22m-5 -5l5 5 5 -5` : `M${x + 40} 154v-22m-5 5l5 -5 5 5`}"/>
-      <path class="pipe ${color}" d="${path}"/>
-      <path data-stream="${r}" class="flow ${color} ${m.running(motor) ? "" : "stopped"}" d="${path}"/>
-      <rect class="body" x="${x - 19}" y="168" width="38" height="22" rx="5"/>`).join("");
+    svgText(x, 108, t[r], "muted", "middle") + svgText(x - 8, 142, m.formatted(r, " °C"), "value", "middle")
+    + '<path class="direction" aria-label="' + (incoming ? "↓" : "↑") + '" d="' + (incoming ? 'M' + (x + 43) + ' 122v22m-5 -5l5 5 5 -5' : 'M' + (x + 43) + ' 144v-22m-5 5l5 -5 5 5') + '"/>'
+    + '<path class="pipe ' + color + '" d="' + path + '"/>'
+    + '<path data-stream="' + r + '" class="flow ' + color + ' ' + (m.running(motor) ? '' : 'stopped') + '" d="' + path + '"/>'
+    + '<rect class="body" x="' + (x - 19) + '" y="150" width="38" height="18" rx="5"/>').join("");
   if (e.efficiency || [e.outdoor, e.extract, e.exhaust].every(Boolean)) {
-    content += '<rect class="cell" x="194" y="270" width="212" height="64" rx="10"/>'
-      + svgText(300, 295, t.efficiency, "muted", "middle")
-      + svgText(300, 323, m.efficiency === null ? "—" : `${Math.round(m.efficiency)} %`, "value", "middle");
+    content += '<g aria-label="' + escapeGraphic(t.efficiency) + '"><rect class="cell" x="92" y="216" width="118" height="80" rx="10"/>'
+      + g.recovery_label.map((label, i) => svgText(151, 238 + i * 22, label, "recovery-label", "middle")).join("")
+      + svgText(151, 286, m.efficiency === null ? "—" : Math.round(m.efficiency) + " %", "value", "middle") + '</g>';
   }
-  const fan = (role, x, y) => !e[role] ? "" : `<g transform="translate(${x} ${y})">
-    <circle class="body" r="27"/><g data-motor="${role}" class="${m.running(role) ? "spin" : "stopped"}">
-    <path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/>
-    </g><circle r="4" fill="var(--surface)"/></g>`;
-  content += fan("motor_out", 80, 440) + fan("motor_in", bypass ? 520 : 450, bypass ? 320 : 260);
-  const heater = (role, x, y, labelX, labelY, anchor) => !e[role] ? "" : `<path data-heater="${role}" class="heater ${m.on(role) ? "hot" : ""}"
-    d="M${x - 24} ${y}l8 -12 8 24 8 -24 8 24 8 -24 8 12"/>`
-    + svgText(labelX, labelY, m.value(role) === null ? `${t[role]} —` : t[role], "muted", anchor);
-  content += heater("front_heating", 476, 550, 540, 602, "end")
-    + heater("post_heating", 415, 198, 300, 204, "middle");
-  if (e.outdoor) content += '<path class="fin" d="M496 430L544 464M496 438L544 472M496 446L544 480"/>'
-    + svgText(360, 578, g.filter_f7, "muted", "middle");
+  const fan = (role, x, y) => !e[role] ? "" : '<g transform="translate(' + x + ' ' + y + ')">'
+    + '<circle class="body" r="27"/><g data-motor="' + role + '" class="' + (m.running(role) ? 'spin' : 'stopped') + '">'
+    + '<path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/>'
+    + '</g><circle r="4" fill="var(--surface)"/></g>';
+  content += '<path class="cell-outline" d="M300 210L400 310L300 410L200 310Z"/>';
+  content += fan("motor_out", 80, 366) + fan("motor_in", 480, 232);
+  const heater = (role, x, y, labelX, labelY, anchor) => !e[role] ? "" : '<path data-heater="' + role + '" class="heater ' + (m.on(role) ? 'hot' : '')
+    + '" d="M' + (x - 24) + ' ' + y + 'l8 -12 8 24 8 -24 8 24 8 -24 8 12"/>'
+      + svgText(labelX, labelY, m.value(role) === null ? t[role] + " —" : t[role], "component", anchor);
+  content += heater("front_heating", 476, 440, 490, 466, "end")
+    + heater("post_heating", 415, 184, 415, 216, "middle");
+  if (e.outdoor) content += '<path class="fin" d="M500 358L540 388M500 366L540 396M500 374L540 404"/>'
+      + svgText(494, 378, g.filter_f7, "component", "end");
   if (e.summer_mode) {
-    content += `<g data-bypass="${bypass ? "open" : "closed"}">
-      <circle class="led" cx="180" cy="550" r="5"/>
-      <path class="heater ${bypass ? "hot" : ""}" d="${bypass ? "M180 550L210 520" : "M180 550V510"}"/></g>`
-      + svgText(60, 602, m.value("summer_mode") === null ? `${g.bypass} —` : bypass ? g.bypass_open : g.bypass_closed, "muted");
+    content += '<g data-bypass="' + (bypass ? 'open' : 'closed') + '"><circle class="led" cx="180" cy="440" r="5"/>'
+      + '<path class="heater ' + (bypass ? 'hot' : '') + '" d="' + (bypass ? 'M180 440L200 420' : 'M180 440V416') + '"/></g>'
+      + svgText(50, 470, m.value("summer_mode") === null ? g.bypass + " —" : bypass ? g.bypass_open : g.bypass_closed, "muted");
   }
-  const badges = [];
-  if (e.climate || e.fan_speed || e.fan) badges.push(`${t.fan_speed}: ${e.climate ? m.level ?? "—" : m.fanPercentage ?? m.formatted("fan_speed", " %")}`);
-  if (m.boost && m.config.show?.boost_remaining !== false) badges.push(`${g.boost} · ${e.boost_remaining ? m.formatted("boost_remaining", ` ${t.minutes}`) : g.active}`);
-  if (m.on("cell_freeze_alarm") && m.config.show?.alarms !== false) badges.push(g.freeze);
-  if (m.alarm && m.config.show?.alarms !== false) badges.push(g.alarm);
-  content += badges.map((label, i) => {
-    const x = 30 + i % 2 * 276, y = 652 + Math.floor(i / 2) * 48;
-    return `<rect class="badge" x="${x}" y="${y}" width="264" height="38" rx="19"/>`
-      + svgText(x + 132, y + 26, label, "muted", "middle");
-  }).join("");
-  if (m.alarm && m.config.show?.alarms !== false) content += '<circle class="warning" cx="550" cy="195" r="8"/>';
+  const badge = (x, y, label) => '<rect class="cell" x="' + x + '" y="' + y + '" width="186" height="36" rx="12"/>'
+    + svgText(x + 93, y + 25, label, "muted", "middle");
+  if (m.config.show_status !== false) {
+    if (e.climate || e.fan_speed || e.fan) content += '<g aria-label="' + escapeGraphic(t.fan_speed) + '"><rect class="cell" x="410" y="322" width="100" height="36" rx="12"/>' + svgText(460, 347, e.climate ? (m.level ?? "—") + " / " + m.max : m.fanPercentage ?? m.formatted("fan_speed", " %"), "muted", "middle") + '</g>';
+    if (m.boost && m.config.show?.boost_remaining !== false) content += badge(352, 30, g.boost + ' · ' + (e.boost_remaining ? m.formatted("boost_remaining", ' ' + t.minutes) : g.active));
+  }
+  if (m.on("cell_freeze_alarm") && m.config.show?.alarms !== false) content += badge(50, 470, g.freeze);
+  if (m.alarm && m.config.show?.alarms !== false) content += '<circle class="warning" cx="550" cy="175" r="8"><title>' + escapeGraphic(g.alarm) + '</title></circle>';
   return graphicSvg(g.exchanger, content, m.duration);
 }
 
@@ -670,6 +688,7 @@ function graphicOverview(hass, u, t, config) {
   const graphics = ["controller", "exchanger"].filter((view) => show[view] !== false).map((view) => ({
     type: "custom:vallox-graphic-card", view, ...HALF,
     device_id: u.deviceId, name: u.name,
+    ...(view === "exchanger" ? { show_status: show.controller === false } : {}),
     entities: { ...Object.fromEntries(Object.keys(PACKAGE_ENTITIES).map((r) => [r, null])), ...u.e }, show: { ...show },
     ...(config.shower_boost_presets ? { shower_boost_presets: config.shower_boost_presets } : {}),
   }));

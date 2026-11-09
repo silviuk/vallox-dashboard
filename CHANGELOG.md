@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+- Draw two full crossing heat-exchanger bands inside one outlined cell, with subtle plates and warm/cold gradients; place recovery beside the cell and heater labels beside their symbols.
+- Compact both graphics to equal desktop heights with balanced bottom padding; place fan controls beside the readout and keep three short action buttons in one row on mobile without a repeated boost footer.
+- Hide exchanger fan/boost badges beside the strategy controller; show them inside standalone exchangers via `show_status` (default `true`).
+- Refresh offline light/dark desktop/mobile captures and verify German spacing, accessibility and unchanged default/tiles snapshots.
+
 ## 1.2.0
 
 - Add opt-in `style: graphic` to section/view/dashboard strategies, preserving default and tiles output from 1.1.0.
