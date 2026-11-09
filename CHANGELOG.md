@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4
+
+- Replace teal-tinted graphic surface, border and text fallbacks with theme-derived neutral grays; use neutral light/dark palettes in the offline preview.
+- Preserve the 1.2.3 layout, artwork, airflow colours, amber status lights and focus accent.
+- Add a neutral graphic palette regression check and refresh all five offline screenshots.
+
 ## 1.2.3
 
 - Restore the 1.2.1 look and colours for both drawings by user request, keeping the 1.2.2 full-width sizing and upright exchanger structure.

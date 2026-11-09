@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.2.3";
+const VALLOX_DASHBOARD_VERSION = "1.2.4";
 
 const TEXT = {
   en: {
@@ -443,8 +443,8 @@ function graphicModel(hass, config = {}, readout = 0) {
 }
 
 const GRAPHIC_CSS = `
-  :host { display:block; font-family:var(--primary-font-family, inherit); color:var(--primary-text-color,#172d3b);
-    --line:var(--divider-color,#cfdae0); --muted:var(--secondary-text-color,#5b707e);
+  :host { display:block; font-family:var(--primary-font-family, inherit); color:var(--primary-text-color,#212121);
+    --line:var(--divider-color,#e0e0e0); --muted:var(--secondary-text-color,#727272);
     --surface:var(--ha-card-background,var(--card-background-color,#fff));
     --active:var(--state-active-color,#e69b28); --cold:#369ac7; --warm:#df8054; }
   ha-card { display:block; background:var(--surface); border-radius:20px; overflow:hidden;
