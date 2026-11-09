@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.2
+
+- Fix phone sections layout: stack full-width graphics with automatic rows; widen the remaining switch-function tile. Use proportional SVG sizing and view-specific masonry estimates.
+- Redraw the original controller with a depth bezel, recessed LCD and pill buttons; add an upright Modell R exchanger casing, numbered round ducts, tall cell, fan housings and pleated F7/G3 filters.
+- Make the offline phone harness apply strategy grid options, including following tile/group spacing; refresh EN/DE light/dark captures and layout/structure regression tests.
+- Preserve options, actions, keyboard access, reduced motion and default/tiles snapshots.
+
 ## 1.2.1
 
 - Draw two full crossing heat-exchanger bands inside one outlined cell, with subtle plates and warm/cold gradients; place recovery beside the cell and heater labels beside their symbols.

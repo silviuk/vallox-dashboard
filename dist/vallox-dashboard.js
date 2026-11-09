@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.2.1";
+const VALLOX_DASHBOARD_VERSION = "1.2.2";
 
 const TEXT = {
   en: {
@@ -452,6 +452,10 @@ const GRAPHIC_CSS = `
   svg { display:block; width:100%; height:auto; font-family:inherit; }
   text { fill:currentColor; font-size:20px; } .muted { fill:var(--muted); font-size:20px; }
   .body,.button { fill:var(--surface); stroke:var(--line); stroke-width:2; }
+  .housing { fill:url(#housing-depth); stroke:var(--muted); stroke-width:2; }
+  .bezel { fill:none; stroke:var(--line); stroke-width:3; }
+  .button { fill:url(#button-depth); stroke:var(--muted); }
+  .duct { fill:var(--surface); stroke:var(--muted); stroke-width:2; }
   .strip { fill:var(--line); opacity:.35; } .lcd { fill:var(--line); fill-opacity:.22; stroke:var(--line); }
   .big { font-size:64px; font-weight:600; letter-spacing:-3px; }
   .title { font-size:24px; font-weight:600; } .value { font-size:28px; font-weight:600; }
@@ -481,7 +485,7 @@ const svgText = (x, y, text, cls = "", anchor = "start") =>
   `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${escapeGraphic(text)}</text>`;
 function graphicButton(x, y, w, h, label, action, disabled = false, glyph = label) {
   return `<g role="button" tabindex="${disabled ? -1 : 0}" aria-label="${escapeGraphic(label)}" aria-disabled="${disabled}" data-action="${action}">
-    <rect class="button" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/>
+    <rect class="button" x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) / 2}"/>
     ${["increase", "decrease"].includes(action)
       ? `<path class="control-symbol" d="M${x + w / 2 - 16} ${y + h / 2}h32${action === "increase" ? `M${x + w / 2} ${y + h / 2 - 16}v32` : ""}"/>`
       : svgText(x + w / 2, y + h / 2 + 7, glyph, "", "middle")}</g>`;
@@ -506,7 +510,10 @@ function renderControllerSvg(m) {
   const displayY = 106 + Math.ceil(leds.length / 3) * 34;
   const actionsY = displayY + 180 + 16;
   const height = actionsY + 82 + 48;
-  let content = `<rect class="body" x="24" y="24" width="552" height="${height - 48}" rx="24"/>
+  let content = `<defs>
+    <linearGradient id="housing-depth" x2="0" y2="1"><stop stop-color="var(--surface)"/><stop offset="1" stop-color="var(--line)"/></linearGradient>
+    <linearGradient id="button-depth" x2="0" y2="1"><stop stop-color="var(--surface)"/><stop offset="1" stop-color="var(--line)"/></linearGradient>
+    </defs><rect class="housing" x="24" y="24" width="552" height="${height - 48}" rx="32"/><rect class="bezel" x="32" y="32" width="536" height="${height - 64}" rx="26"/>
     <path class="strip" d="M52 24H548Q576 24 576 52V88H24V52Q24 24 52 24Z"/>`
     + svgText(48, 63, m.unit.name, "title");
   content += leds.map(([, label, active], i) => {
@@ -514,7 +521,7 @@ function renderControllerSvg(m) {
     return `<circle cx="${x}" cy="${y - 6}" r="6" class="led ${active ? "lit" : ""}"><title>${escapeGraphic(label)}</title></circle>`
       + svgText(x + 14, y, active === null ? `${label} —` : label, "muted");
   }).join("");
-  content += `<g transform="translate(0 ${displayY - 174})"><rect class="lcd" x="48" y="174" width="504" height="180" rx="18"/>`
+  content += `<g transform="translate(0 ${displayY - 174})"><rect class="lcd recessed-lcd" x="48" y="174" width="504" height="180" rx="18"/>`
     + svgText(72, 202, e.climate ? t.fan_speed : g.core_fan, "muted")
     + svgText(300, 267, e.climate ? `${m.level ?? "—"} / ${m.max}` :
       (m.fanPercentage ?? m.formatted("fan_speed", " %")), "big", "middle");
@@ -537,69 +544,59 @@ function renderControllerSvg(m) {
 }
 
 function renderExchangerSvg(m) {
-  const { e, t, g } = m;
-  const bypass = m.on("summer_mode");
-  let content = svgText(32, 40, g.exchanger, "title") + svgText(32, 70, m.unit.name, "muted")
-    + '<rect class="body" x="30" y="156" width="540" height="320" rx="24"/>'
-    + '<defs><linearGradient id="extract-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="260" x2="350" y2="360"><stop stop-color="var(--warm)"/><stop offset="1" stop-color="var(--cold)"/></linearGradient>'
-    + '<linearGradient id="supply-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="360" x2="350" y2="260"><stop stop-color="var(--cold)"/><stop offset="1" stop-color="var(--warm)"/></linearGradient></defs>'
-    + '<path class="cell" d="M300 210L400 310L300 410L200 310Z"/>';
-  for (let offset = -30; offset <= 30; offset += 15) {
-    content += '<path class="plate" d="M' + (250 + offset) + ' ' + (260 - offset) + 'L' + (350 + offset) + ' ' + (360 - offset) + '"/>';
+  const { e, t, g } = m, bypass = m.on("summer_mode");
+  const cell = "M300 288L400 372V456L300 540L200 456V372Z";
+  let content = svgText(32, 38, g.exchanger, "title") + svgText(32, 66, m.unit.name, "muted")
+    + '<rect class="body unit-casing" x="36" y="194" width="528" height="426" rx="12"/>'
+    + '<rect class="bezel" x="47" y="205" width="506" height="404" rx="6"/>'
+    + '<defs><linearGradient id="extract-gradient" gradientUnits="userSpaceOnUse" x1="350" y1="330" x2="250" y2="498"><stop stop-color="var(--warm)"/><stop offset="1" stop-color="var(--cold)"/></linearGradient>'
+    + '<linearGradient id="supply-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="350" y2="498"><stop stop-color="var(--cold)"/><stop offset="1" stop-color="var(--warm)"/></linearGradient></defs>'
+    + '<path data-component="cell" class="cell" d="' + cell + '"/>';
+  const stream = (name, path, color, motor, inCell = false, extra = "") => '<g style="' + (inCell ? 'stroke:url(#' + name + '-gradient)' : '') + '"><path class="pipe ' + color + '" d="' + path + '"/>'
+    + '<path data-' + (inCell ? 'cell-stream' : 'stream') + '="' + name + '" ' + extra + ' class="flow ' + color + ' ' + (m.running(motor) ? '' : 'stopped') + '" d="' + path + '"/></g>';
+  // Separate exterior lanes; every component is centred on its own continuous stream.
+  content += stream("outdoor", bypass ? "M210 194V300H170" : "M210 194V300L250 330", "cold", "motor_in")
+    + stream("extract", "M370 194V300L350 330", "warm", "motor_out")
+    + stream("supply", bypass ? "M480 574V240H510V194" : "M350 498H480V240H510V194", bypass ? "cold" : "warm", "motor_in")
+    + stream("exhaust", "M250 498H80V194", "cold", "motor_out")
+    + stream("extract", "M350 330L250 498", "", "motor_out", true);
+  if (bypass) {
+    // Keep the inlet beside the cell, then pass below the recovery badge to the bottom flap.
+    content += stream("supply", "M170 300V550H100V612H410V574H480", "cold", "motor_in", false, 'data-bypass-route="supply"');
+  } else content += stream("supply", "M250 330L350 498", "", "motor_in", true);
+  const ducts = [["exhaust",4,80,false],["outdoor",1,210,true],["extract",2,370,true],["supply",3,510,false]];
+  for (const [role, number, x, incoming] of ducts) {
+    content += '<g data-duct="' + role + '" data-port="' + number + '"><path class="duct" d="M' + (x-22) + ' 174v26a22 8 0 0 0 44 0v-26"/>'
+      + '<ellipse class="duct" cx="' + x + '" cy="174" rx="22" ry="8"/>' + svgText(x,199,number,"component","middle") + '</g>';
+    if (e[role]) content += '<g data-temperature="' + role + '">'
+      + svgText(x,104,t[role],"muted","middle") + svgText(x,135,m.formatted(role," °C"),"value","middle")
+      + '<path class="direction" aria-label="' + (incoming ? '↓' : '↑') + '" d="M' + x + (incoming ? ' 143v17m-5 -5l5 5 5 -5' : ' 160v-17m-5 5l5 -5 5 5') + '"/></g>';
   }
-  // Opposite faces: NW → SE extract/exhaust, SW → NE outdoor/supply.
-  // One soft band and one animated dash line per stream, face to opposite face.
-  const channels = (name, from, to, motor) => {
-    const path = 'M' + from[0] + ' ' + from[1] + 'L' + to[0] + ' ' + to[1];
-    return '<g style="stroke:url(#' + name + '-gradient)"><path class="pipe" d="' + path + '"/>'
-      + '<path data-cell-stream="' + name + '" class="flow ' + (m.running(motor) ? '' : 'stopped') + '" d="' + path + '"/></g>';
+  const filter = (name, x, y, streamName) => {
+    let f = '<g data-filter="' + name + '" data-on-stream="' + streamName + '"><rect class="body" x="' + (x-30) + '" y="' + (y-16) + '" width="60" height="32" rx="3"/>';
+    for (let i=-22;i<28;i+=10) f += '<path class="fin" d="M' + (x+i) + ' ' + (y-13) + 'l-5 13 5 13"/>';
+    return f + svgText(x+40,y+6,name,"component") + '</g>';
   };
-  content += channels("extract", [250, 260], [350, 360], "motor_out");
-  if (!bypass) content += channels("supply", [250, 360], [350, 260], "motor_in");
-  const ducts = [
-    ["outdoor", 520, bypass ? "M520 156V440H170V212H380V156" : "M520 156V440H180L250 360", "cold", "motor_in", true],
-    ["supply", 380, bypass ? "M380 212H480V184H380V156" : "M350 260L480 232V184H380V156", bypass ? "cold" : "warm", "motor_in", false],
-    ["extract", 220, "M220 156V230L250 260", "warm", "motor_out", true],
-    ["exhaust", 80, "M350 360L410 420H80V156", "cold", "motor_out", false],
-  ];
-  content += ducts.filter(([r]) => e[r]).map(([r, x, path, color, motor, incoming]) =>
-    svgText(x, 108, t[r], "muted", "middle") + svgText(x - 8, 142, m.formatted(r, " °C"), "value", "middle")
-    + '<path class="direction" aria-label="' + (incoming ? "↓" : "↑") + '" d="' + (incoming ? 'M' + (x + 43) + ' 122v22m-5 -5l5 5 5 -5' : 'M' + (x + 43) + ' 144v-22m-5 5l5 -5 5 5') + '"/>'
-    + '<path class="pipe ' + color + '" d="' + path + '"/>'
-    + '<path data-stream="' + r + '" class="flow ' + color + ' ' + (m.running(motor) ? '' : 'stopped') + '" d="' + path + '"/>'
-    + '<rect class="body" x="' + (x - 19) + '" y="150" width="38" height="18" rx="5"/>').join("");
-  if (e.efficiency || [e.outdoor, e.extract, e.exhaust].every(Boolean)) {
-    content += '<g aria-label="' + escapeGraphic(t.efficiency) + '"><rect class="cell" x="92" y="216" width="118" height="80" rx="10"/>'
-      + g.recovery_label.map((label, i) => svgText(151, 238 + i * 22, label, "recovery-label", "middle")).join("")
-      + svgText(151, 286, m.efficiency === null ? "—" : Math.round(m.efficiency) + " %", "value", "middle") + '</g>';
-  }
-  const fan = (role, x, y) => !e[role] ? "" : '<g transform="translate(' + x + ' ' + y + ')">'
-    + '<circle class="body" r="27"/><g data-motor="' + role + '" class="' + (m.running(role) ? 'spin' : 'stopped') + '">'
-    + '<path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/>'
-    + '</g><circle r="4" fill="var(--surface)"/></g>';
-  content += '<path class="cell-outline" d="M300 210L400 310L300 410L200 310Z"/>';
-  content += fan("motor_out", 80, 366) + fan("motor_in", 480, 232);
-  const heater = (role, x, y, labelX, labelY, anchor) => !e[role] ? "" : '<path data-heater="' + role + '" class="heater ' + (m.on(role) ? 'hot' : '')
-    + '" d="M' + (x - 24) + ' ' + y + 'l8 -12 8 24 8 -24 8 24 8 -24 8 12"/>'
-      + svgText(labelX, labelY, m.value(role) === null ? t[role] + " —" : t[role], "component", anchor);
-  content += heater("front_heating", 476, 440, 490, 466, "end")
-    + heater("post_heating", 415, 184, 415, 216, "middle");
-  if (e.outdoor) content += '<path class="fin" d="M500 358L540 388M500 366L540 396M500 374L540 404"/>'
-      + svgText(494, 378, g.filter_f7, "component", "end");
-  if (e.summer_mode) {
-    content += '<g data-bypass="' + (bypass ? 'open' : 'closed') + '"><circle class="led" cx="180" cy="440" r="5"/>'
-      + '<path class="heater ' + (bypass ? 'hot' : '') + '" d="' + (bypass ? 'M180 440L200 420' : 'M180 440V416') + '"/></g>'
-      + svgText(50, 470, m.value("summer_mode") === null ? g.bypass + " —" : bypass ? g.bypass_open : g.bypass_closed, "muted");
-  }
-  const badge = (x, y, label) => '<rect class="cell" x="' + x + '" y="' + y + '" width="186" height="36" rx="12"/>'
-    + svgText(x + 93, y + 25, label, "muted", "middle");
+  if (e.outdoor) content += filter("F7",210,240,"supply");
+  if (e.extract) content += filter("G3",370,240,"extract");
+  const fan = (role, x, y, streamName) => !e[role] ? "" : '<g data-fan="' + role + '" data-on-stream="' + streamName + '" transform="translate(' + x + ' ' + y + ')"><rect class="body" x="-41" y="-41" width="82" height="82" rx="18"/>'
+    + '<circle class="duct" r="32"/><g data-motor="' + role + '" class="' + (m.running(role) ? 'spin' : 'stopped') + '"><path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/></g><circle r="5" fill="var(--surface)"/></g>';
+  content += fan("motor_in",480,390,"supply") + fan("motor_out",110,498,"extract")
+    + '<path class="cell-outline" d="' + cell + '"/>';
+  const heater = (role, x, y) => !e[role] ? "" : '<g data-on-stream="supply"><title>' + escapeGraphic(t[role]) + '</title><path data-heater="' + role + '" class="heater ' + (m.on(role) ? 'hot' : '') + '" d="M' + (x-20) + ' ' + y + 'l8 -10 8 20 8 -20 8 20 8 -10"/></g>';
+  content += heater("front_heating",210,284) + heater("post_heating",480,280);
+  if (e.efficiency || [e.outdoor,e.extract,e.exhaust].every(Boolean)) content += '<g aria-label="' + escapeGraphic(t.efficiency) + '"><rect class="cell" x="244" y="552" width="112" height="54" rx="10"/>'
+    + g.recovery_label.map((label,i) => svgText(234,572+i*22,label,"recovery-label","end")).join("")
+    + svgText(300,587,m.efficiency === null ? "—" : Math.round(m.efficiency)+" %","value","middle") + '</g>';
+  if (e.summer_mode) content += '<g data-bypass="' + (bypass ? 'open' : 'closed') + '"><circle class="led" cx="410" cy="574" r="5"/><path class="heater ' + (bypass ? 'hot' : '') + '" d="' + (bypass ? 'M410 574l22 -20' : 'M410 574h28') + '"/></g>'
+    + svgText(300,630,m.value("summer_mode") === null ? g.bypass + " —" : bypass ? g.bypass_open : g.bypass_closed,"muted","middle");
   if (m.config.show_status !== false) {
-    if (e.climate || e.fan_speed || e.fan) content += '<g aria-label="' + escapeGraphic(t.fan_speed) + '"><rect class="cell" x="410" y="322" width="100" height="36" rx="12"/>' + svgText(460, 347, e.climate ? (m.level ?? "—") + " / " + m.max : m.fanPercentage ?? m.formatted("fan_speed", " %"), "muted", "middle") + '</g>';
-    if (m.boost && m.config.show?.boost_remaining !== false) content += badge(352, 30, g.boost + ' · ' + (e.boost_remaining ? m.formatted("boost_remaining", ' ' + t.minutes) : g.active));
+    if (e.climate || e.fan_speed || e.fan) content += '<g aria-label="' + escapeGraphic(t.fan_speed) + '">' + svgText(32,655,(e.climate ? (m.level ?? "—")+" / "+m.max : m.fanPercentage ?? m.formatted("fan_speed"," %")),"muted") + '</g>';
+    if (m.boost && m.config.show?.boost_remaining !== false) content += svgText(568,655,g.boost+' · '+(e.boost_remaining ? m.formatted("boost_remaining",' '+t.minutes) : g.active),"muted","end");
   }
-  if (m.on("cell_freeze_alarm") && m.config.show?.alarms !== false) content += badge(50, 470, g.freeze);
-  if (m.alarm && m.config.show?.alarms !== false) content += '<circle class="warning" cx="550" cy="175" r="8"><title>' + escapeGraphic(g.alarm) + '</title></circle>';
-  return graphicSvg(g.exchanger, content, m.duration);
+  if (m.on("cell_freeze_alarm") && m.config.show?.alarms !== false) content += svgText(300,655,g.freeze,"muted","middle");
+  if (m.alarm && m.config.show?.alarms !== false) content += '<circle class="warning" cx="546" cy="218" r="7"><title>' + escapeGraphic(g.alarm) + '</title></circle>';
+  return graphicSvg(g.exchanger, content, m.duration, m.config.show_status !== false || m.on("cell_freeze_alarm") ? 676 : 650);
 }
 
 class ValloxGraphicCard extends HTMLElement {
@@ -628,8 +625,8 @@ class ValloxGraphicCard extends HTMLElement {
     this._signature = signature;
     this._render(m);
   }
-  getCardSize() { return 8; }
-  getGridOptions() { return { columns: 12, min_columns: 6, rows: 8 }; }
+  getCardSize() { return this._config?.view === "exchanger" ? 8 : 7; }
+  getGridOptions() { return { columns: 12, min_columns: 12, rows: "auto" }; }
   _model() {
     const m = graphicModel(this._hass, this._config, this._readout);
     return m;
@@ -686,12 +683,25 @@ function graphicOverview(hass, u, t, config) {
   cards = cards.filter((c, i) => c.heading_style !== "subtitle" ||
     (cards[i + 1] && cards[i + 1].type !== "heading"));
   const graphics = ["controller", "exchanger"].filter((view) => show[view] !== false).map((view) => ({
-    type: "custom:vallox-graphic-card", view, ...HALF,
+    type: "custom:vallox-graphic-card", view, grid_options: { columns: 12, rows: "auto" },
     device_id: u.deviceId, name: u.name,
     ...(view === "exchanger" ? { show_status: show.controller === false } : {}),
     entities: { ...Object.fromEntries(Object.keys(PACKAGE_ENTITIES).map((r) => [r, null])), ...u.e }, show: { ...show },
     ...(config.shower_boost_presets ? { shower_boost_presets: config.shower_boost_presets } : {}),
   }));
+  // Pair consecutive half-width entity tiles within each row group. Other cards
+  // end the group and must never acquire tile grid options (especially headings).
+  let unpaired = -1;
+  const finishRow = () => {
+    if (unpaired !== -1) cards[unpaired] = { ...cards[unpaired], ...FULL };
+    unpaired = -1;
+  };
+  cards.forEach((card, i) => {
+    if (card.entity && card.grid_options?.columns === 6) {
+      unpaired = unpaired === -1 ? i : -1;
+    } else finishRow();
+  });
+  finishRow();
   return section([cards[0], ...graphics, ...cards.slice(1)]);
 }
 

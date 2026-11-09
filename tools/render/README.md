@@ -2,38 +2,37 @@ Open `index.html` directly in a browser. All resources are local. No server, dep
 fonts, remote images, or Home Assistant connection are used. Buttons only log mock calls.
 
 Query options: `?theme=dark`, `?lang=de`, `?variant=bypass`, `?variant=stopped`,
-`?layout=narrow` (430 px, one card per row), and `?view=controller` / `?view=exchanger`; combine with `&`.
+`?layout=phone` (390 px), and `?view=controller` / `?view=exchanger`; combine with `&`.
 Regenerate sanitized sample data with `node tools/render/generate.mjs`.
 
-Example PowerShell capture from the repository root:
+The phone preview uses a 12-column sections grid and the strategy's own
+`grid_options.columns` and `grid_options.rows`. The graphic cards span all 12 columns
+with automatic height. Numeric rows emulate 56 px rows with 8 px gaps. Phone padding
+leaves 366 px for cards. The default preview also stacks the cards, at 480 px wide.
+
+Run the local capture script from the repository root:
 
 ```powershell
-$preview = (Join-Path (Get-Location) 'tools/render/index.html')
-$output = (Join-Path (Get-Location) 'images/graphic-dark.png')
-& 'C:\Program Files\Google\Chrome\Application\chrome.exe' --headless=new --disable-gpu --hide-scrollbars --disable-background-networking --no-first-run --window-size=1200,900 "--screenshot=$output" "file:///$($preview.Replace('\','/'))?theme=dark"
+./tools/render/capture.ps1
 ```
 
-Animation respects the operating system's reduced-motion preference. This is development
+It uses Chrome at `C:\Program Files\Google\Chrome\Application\chrome.exe`, blocks
+host resolution, disables background networking, and forces reduced motion.
+It verifies stacked cards, card widths and the 8 px gap to the following tile.
+The script captures and trims all five PNGs to the measured content bounds automatically:
+
+| Output in `images/` | Query | Capture viewport |
+| --- | --- | --- |
+| `graphic-light.png` | default | 1200 x 1600 |
+| `graphic-dark.png` | `?theme=dark` | 1200 x 1600 |
+| `graphic-mobile-light.png` | `?layout=phone` | 390 x 1400 |
+| `graphic-mobile-dark.png` | `?layout=phone&theme=dark` | 390 x 1400 |
+| `graphic-mobile-de.png` | `?layout=phone&lang=de` | 390 x 1400 |
+
+Final widths are 536 px for desktop and 390 px for phone; heights follow content.
+The script prints each final size. No manual cropping is needed.
+
+Animation respects the operating system's reduced-motion preference. The default paired
+preview hides duplicate exchanger status, matching the strategy; `?view=exchanger`
+shows standalone fan/boost badges. Keep the same sample data. This is development
 tooling only; HA loads only `dist/vallox-dashboard.js`.
-
-The checked-in light/dark PNGs were captured with Chrome at 1200 × 900; mobile light/dark
-use 430 × 1250 with `?layout=narrow` (append `&theme=dark` for dark). The narrow harness
-explicitly caps the page width to avoid Chrome headless's minimum layout viewport cropping the cards.
-After Chrome exits, crop the mobile captures to 430 × 880 (content plus bottom padding):
-
-```powershell
-Add-Type -AssemblyName System.Drawing
-foreach ($name in @('graphic-mobile-light.png', 'graphic-mobile-dark.png')) {
-  $path = Join-Path (Get-Location) "images/$name"
-  $bitmap = [System.Drawing.Bitmap]::new($path)
-  $crop = $bitmap.Clone([System.Drawing.Rectangle]::new(0, 0, 430, 880), $bitmap.PixelFormat)
-  $bitmap.Dispose()
-  $crop.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
-  $crop.Dispose()
-}
-```
-
-The default paired preview hides duplicate exchanger status, matching the strategy;
-`?view=exchanger` shows standalone fan/boost badges. Keep the same sample data.
-For fully offline captures, also pass `'--host-resolver-rules=MAP * ~NOTFOUND'` to Chrome.
-In a sandboxed environment Chrome may additionally need `--no-sandbox`.
