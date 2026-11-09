@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0
+
+- Add opt-in `style: graphic` to section/view/dashboard strategies, preserving default and tiles output from 1.1.0.
+- Bundle one standalone `custom:vallox-graphic-card` with original MIT controller and heat-exchanger SVG views, theme support and English/German labels.
+- Add user-activated fan-level, boost, heating and optional shower controls, guarded by advertised modes and current states; power stays read-only.
+- Animate directional air streams and motor fans with reduced-motion support; show live temperatures, guarded recovery, heaters, bypass, boost and alarms.
+- Retain existing nonduplicated groups and core fan/profile controls; support discovery, manual role overrides and graphic visibility switches.
+- Add saved 1.1.0 regression outputs, offline renderer/action tests, a static local preview harness and light/dark Chrome screenshots.
+- Bump resource/package and generated tiles examples to 1.2.0.
+
 ## 1.1.0
 
 - Discover vallox2mqtt 1.2 alarms, built-in boost time remaining and read-only unit setpoints, excluding raw diagnostics.

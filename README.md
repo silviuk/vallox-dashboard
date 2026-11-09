@@ -5,7 +5,8 @@
 
 A modern, tile-based Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation).
 It ships as **section, view and dashboard strategies**: the UI builds itself from your entities, so there is
-nothing to configure. It uses **only built-in Home Assistant cards**: tile, heading, button, history-graph and markdown.
+nothing to configure. The default uses built-in Home Assistant cards: tile, heading, button, history-graph and markdown.
+An opt-in graphic style adds one bundled custom card with original inline SVG artwork.
 
 Supported integrations (auto-discovered):
 
@@ -88,6 +89,7 @@ All options are optional and work for every strategy type.
 
 | Option | Default | Description |
 |---|---|---|
+| `style` | `tiles` | `graphic` enables the digital controller and exchanger schematic. Default tiles output is unchanged from 1.1.0. |
 | `section` | `all` | Section strategy only: `all` (overview and history in one section), `overview` or `history`. |
 | `sections` | `[overview, history]` | View and dashboard only: which sections to show, in that order. |
 | `max_columns` | `3` | View and dashboard only: maximum number of section columns. |
@@ -203,6 +205,98 @@ If you prefer a plain dashboard with no custom resource, copy one of the generat
 You can also generate one for your own entities in the browser console of your dashboard:
 `copy(JSON.stringify(valloxDashboard.buildSection(document.querySelector("home-assistant").hass, {})))`
 
+## Graphic style
+
+Add `style: graphic` to any section, view or dashboard strategy:
+
+```yaml
+strategy:
+  type: custom:vallox-ventilation
+  style: graphic
+  show:
+    controller: true
+    exchanger: true
+```
+
+Both graphics are also available directly, using the same resource:
+
+```yaml
+type: custom:vallox-graphic-card
+view: controller # or exchanger
+# device_id: your_device_id
+# name: Ventilation
+# entities:
+#   outdoor: sensor.my_outdoor_temperature
+```
+
+The card uses existing integration discovery, `device_id`, `name` and `entities` overrides
+(including `null` to suppress a role). No entity configuration is needed on vallox2mqtt.
+The direct card picks the first selected unit. Strategy cards carry the selected unit's mappings.
+The card picker lists **Vallox graphic**; change `view` in YAML to select the exchanger.
+
+The digital panel shows a read-only power indicator and available heater, bypass, service,
+alarm, CO₂ and humidity indicators. Its LCD shows fan level and a secondary readout;
+▲/▼ cycle available temperatures, recovery, built-in boost time and fault code locally.
+The +/− buttons call `climate.set_fan_mode` with string modes from `"1"` to `"8"`,
+bounded by the advertised `fan_modes` and `maximum_fan_speed`. Sparse advertised modes
+are stepped through in order. Heating toggles `heat` / `fan_only` only when both modes
+are advertised. Boost calls only `switch.turn_on`: an active boost is disabled because
+vallox2mqtt cannot cancel it from HA. The shower button calls the first valid
+`shower_boost_presets` entry (default 15 minutes, level 6) when the package script exists.
+All writes require a click/tap or Enter/Space; no service is called while rendering.
+
+The exchanger is an abstract front-view schematic: four top ducts, a tall central cell,
+extract fan lower left, supply fan right, pre-heater beside the F7 outdoor filter at
+lower right, post-heater on the supply side, and a bottom bypass flap.
+It is an orientation aid, not an installation or physical duct-routing diagram.
+Directional dashed streams and fan animation follow fan level and stop when the unit
+or the corresponding motor is off. Reduced-motion preferences disable all animation.
+Temperatures, recovery, heating, bypass, boost and alarm highlights update from HA states.
+
+| Display | Entity roles |
+|---|---|
+| Fan level / controls / power | `climate`, `fan`, `fan_speed`, `maximum_fan_speed`, `status` |
+| Four ducts / LCD | `outdoor`, `supply`, `extract`, `exhaust` |
+| Heat recovery | `efficiency`, otherwise the guarded extract-side estimate, clamped 0–100%, only if extract minus outdoor ≥ 4 K |
+| Fans / heaters / bypass | `motor_in`, `motor_out`, `front_heating`, `post_heating`, `summer_mode` |
+| Service / alarms | `service_needed`, `filter_warning`, `error_relay`, `cell_freeze_alarm`, `fault_code` > 0 |
+| Built-in boost | `boost_switch`, `boost_remaining` (minutes) |
+| Optional indicators / shower | `co2`, `humidity`, `humidity_2`, `shower_boost` |
+
+Missing roles are omitted; unavailable numeric readings show **—**. Recovery is an
+estimate unless an efficiency sensor exists. Indicators show reported states, not sensor
+threshold alarms. The F7 label is a schematic component, not a measured filter condition.
+This vallox2mqtt unit has no bus CO₂/RH or measured airflow; those values are not invented.
+There is no power-off control: vallox2mqtt climate provides no OFF write path.
+Core Vallox keeps its existing fan/profile tiles; the graphic can show fan percentage,
+but hides +/− because core percentages/profiles do not map to discrete Digit SE levels.
+
+Graphic overview starts with the two cards in half-width section slots. SVGs scale to
+their available width; standalone cards default to a full-width slot. It retains the
+alarm banner/groups, shower/humidity controls, setpoints, service details and history.
+It removes the duplicated climate, boost, temperature, efficiency, fan motor, heater
+and summer-mode tiles and the temperature flow strip. Supply-after-cell, RPM, cell-state
+and bypass-lock tiles remain when available. `show.controller` and `show.exchanger`
+hide each graphic independently. Existing group switches still apply; `show.alarms`,
+`show.boost_remaining` and `show.shower_boost` also suppress corresponding graphic
+details. `show.temperature_flow` applies only to tiles style, since the diagram replaces
+that strip. Hiding a graphic does not restore its replaced tiles.
+
+Both views share HA theme variables, typography, strokes and corner radii, with EN/DE
+labels. All graphics are original MIT artwork drawn from scratch, with no external
+images, fonts, third-party cards or build step. Manual images were viewed only for
+component orientation; no manual or GPL artwork/code is included.
+
+Offline preview and screenshot instructions: [tools/render](tools/render/README.md).
+The harness uses sanitized fixture samples (6/17/21/9 °C, level 3, post-heat on,
+12 minutes of built-in boost); its buttons record mock service calls only.
+
+| Light theme | Dark theme |
+|---|---|
+| ![Graphic style, light](images/graphic-light.png) | ![Graphic style, dark](images/graphic-dark.png) |
+
+Narrow layout (430 px): [light](images/graphic-mobile-light.png) · [dark](images/graphic-mobile-dark.png).
+
 ## Notes
 
 - **vallox2mqtt temperatures** have no `device_class` or `state_class`, so Home Assistant keeps no long-term
@@ -219,7 +313,11 @@ node tests/explicit.mjs fixture_vallox2mqtt_1_2.json Ventilation   # print an ex
 node tests/explicit.mjs fixture_vallox2mqtt_1_2.json Ventilation en --yaml # YAML with example header
 ```
 
-The 1.2 fixture is sanitized from the reference states/registry and contains generic unit and package entities only. The old MQTT fixture is compared against a saved 1.0.0 section/view output. Tests also cover new roles, missing entities, group switches, action payloads and EN/DE label parity.
+The 1.2 fixture is sanitized from the reference states/registry and contains generic unit and package entities only.
+All three fixtures have saved 1.1.0 section/view snapshots for byte-identical default/tiles regression checks;
+the old MQTT fixture also retains its 1.0.0 comparison. Offline graphic tests cover SVG rendering,
+escaping, missing/unavailable roles, selective updates, keyboard actions, service payloads,
+fan limits, boost/heating guards, strategy propagation and EN/DE label parity.
 
 ## License
 

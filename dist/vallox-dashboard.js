@@ -6,9 +6,9 @@
  * tile-based UI for Vallox ventilation units. Supported integrations:
  *   - vallox2mqtt (Vallox Digit SE / ValloPlus SE over RS485, kotope/valloxesp)
  *   - vallox (Home Assistant core, Vallox MV units over the network)
- * Only built-in Home Assistant cards are used. MIT licensed.
+ * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.1.0";
+const VALLOX_DASHBOARD_VERSION = "1.2.0";
 
 const TEXT = {
   en: {
@@ -366,9 +366,320 @@ function controlCards(hass, u, t, config) {
   return cards;
 }
 
+// Original MIT artwork: abstract geometry, no embedded or traced reference artwork.
+const GRAPHIC_TEXT = {
+  en: { controller: "Digital controller", exchanger: "Heat exchanger", power: "Power",
+    heating: "Heating mode", filter: "Service", alarm: "Alarm", previous: "Previous readout",
+    next: "Next readout", increase: "Increase fan level", decrease: "Decrease fan level",
+    readout: "Readout", bypass: "Bypass", filter_f7: "Outdoor filter · F7", active: "Active",
+    action_error: "Action failed", core_fan: "Fan speed", freeze: "Cell freeze",
+    boost: "Boost", bypass_open: "Bypass open", bypass_closed: "Bypass closed" },
+  de: { controller: "Digitalregler", exchanger: "Wärmetauscher", power: "Betrieb",
+    heating: "Heizbetrieb", filter: "Wartung", alarm: "Alarm", previous: "Vorherige Anzeige",
+    next: "Nächste Anzeige", increase: "Lüfterstufe erhöhen", decrease: "Lüfterstufe senken",
+    readout: "Anzeige", bypass: "Bypass", filter_f7: "Außenfilter · F7", active: "Aktiv",
+    action_error: "Aktion fehlgeschlagen", core_fan: "Lüfterleistung", freeze: "Tauscherfrost",
+    boost: "Boost", bypass_open: "Bypass offen", bypass_closed: "Bypass geschlossen" },
+};
+const escapeGraphic = (value) => String(value).replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const graphicNumber = (value) => value !== null && value !== undefined && String(value).trim() !== ""
+  && Number.isFinite(Number(value)) ? Number(value) : null;
+const graphicAvailable = (state) => !!state && !["unknown", "unavailable"].includes(state.state);
+
+function graphicModel(hass, config = {}, readout = 0) {
+  const unit = pickUnits(hass, config)[0] || { name: config.name || "Vallox", e: {} };
+  const e = Object.fromEntries(Object.entries(unit.e).filter(([, id]) => exists(hass, id)));
+  const state = (r) => hass.states[e[r]];
+  const value = (r) => graphicAvailable(state(r)) ? state(r).state : null;
+  const number = (r) => graphicNumber(value(r));
+  const on = (r) => value(r) === "on";
+  const flag = (r) => value(r) === null ? null : on(r);
+  const anyFlag = (roles) => roles.some(on) ? true : roles.some((r) => e[r] && value(r) === null) ? null : false;
+  const a = state("climate")?.attributes || {};
+  const t = texts(hass);
+  const lang = t === TEXT.de ? "de" : "en";
+  const g = GRAPHIC_TEXT[lang];
+  let max = Math.max(1, Math.min(8, Math.floor(number("maximum_fan_speed") ?? 8)));
+  const modes = (Array.isArray(a.fan_modes) ? a.fan_modes : []).filter((v) =>
+    typeof v === "string" && /^[1-8]$/.test(v) && Number(v) <= max).sort((x, y) => Number(x) - Number(y));
+  if (modes.length) max = Number(modes[modes.length - 1]);
+  const level = graphicAvailable(state("climate")) ? graphicNumber(a.fan_mode) : number("fan_speed");
+  const powerRole = e.status ? "status" : e.climate ? "climate" : e.fan ? "fan" : null;
+  const power = powerRole && value(powerRole) !== null ? !["off", "0"].includes(value(powerRole)) : null;
+  const alarm = ALARM_ROLES.some((r) => r === "fault_code" ? number(r) > 0 : on(r));
+  let efficiency = number("efficiency");
+  if (!e.efficiency && ["outdoor", "extract", "exhaust"].every((r) => number(r) !== null)
+      && number("extract") - number("outdoor") >= 4) {
+    efficiency = Math.max(0, Math.min(100, (number("extract") - number("exhaust")) /
+      (number("extract") - number("outdoor")) * 100));
+  }
+  const formatted = (r, suffix = "") => number(r) === null ? "—" : `${Math.round(number(r) * 10) / 10}${suffix}`;
+  const readouts = ["outdoor", "supply", "extract", "exhaust"].filter((r) => e[r])
+    .map((r) => [t[r], formatted(r, " °C")]);
+  if (e.efficiency || [e.outdoor, e.extract, e.exhaust].every(Boolean)) {
+    readouts.push([e.efficiency ? t.efficiency : t.efficiency_est, efficiency === null ? "—" : `${Math.round(efficiency)} %`]);
+  }
+  if (e.boost_remaining && config.show?.boost_remaining !== false) readouts.push([t.boost_remaining, formatted("boost_remaining", ` ${t.minutes}`)]);
+  if (e.fault_code && config.show?.alarms !== false) readouts.push([t.fault_code, formatted("fault_code")]);
+  const selected = readouts.length ? ((readout % readouts.length) + readouts.length) % readouts.length : 0;
+  const presets = Array.isArray(config.shower_boost_presets) ? config.shower_boost_presets : SHOWER_PRESETS;
+  const preset = presets.find((p) => p && Number.isInteger(p.level) && p.level >= 1 && p.level <= 8
+    && Number.isInteger(p.minutes) && p.minutes > 0 && p.minutes <= 120);
+  const boost = on("boost_switch") || number("boost_remaining") > 0;
+  const usableClimate = graphicAvailable(state("climate"));
+  return { unit, e, t, g, config, value, number, on, flag, anyFlag, formatted, max, modes, level, power, alarm, efficiency,
+    readouts, selected, preset, boost, hass,
+    fanPercentage: graphicAvailable(state("fan")) && graphicNumber(state("fan")?.attributes?.percentage) !== null
+      ? `${graphicNumber(state("fan").attributes.percentage)} %` : null,
+    canFan: usableClimate && level !== null && modes.length > 0,
+    canHeat: usableClimate && ["heat", "fan_only"].includes(value("climate"))
+      && ["heat", "fan_only"].every((v) => a.hvac_modes?.includes(v)),
+    running: (r) => power === true && (e[r] ? on(r) : (level > 0 || value("fan") === "on")),
+    duration: `${Math.max(0.35, 2.8 / Math.max(1, level || 1))}s`,
+  };
+}
+
+const GRAPHIC_CSS = `
+  :host { display:block; font-family:var(--primary-font-family, inherit); color:var(--primary-text-color,#172d3b);
+    --line:var(--divider-color,#cfdae0); --muted:var(--secondary-text-color,#5b707e);
+    --surface:var(--ha-card-background,var(--card-background-color,#fff));
+    --active:var(--state-active-color,#e69b28); --cold:#369ac7; --warm:#df8054; }
+  ha-card { display:block; background:var(--surface); border-radius:20px; overflow:hidden;
+    border:1px solid var(--line); box-shadow:none; }
+  svg { display:block; width:100%; height:auto; font-family:inherit; }
+  text { fill:currentColor; font-size:20px; } .muted { fill:var(--muted); font-size:20px; }
+  .body,.button { fill:var(--surface); stroke:var(--line); stroke-width:2; }
+  .strip { fill:var(--line); opacity:.35; } .lcd { fill:var(--line); fill-opacity:.22; stroke:var(--line); }
+  .big { font-size:64px; font-weight:600; letter-spacing:-3px; }
+  .title { font-size:24px; font-weight:600; } .value { font-size:28px; font-weight:600; }
+  .control-symbol { stroke:currentColor; stroke-width:4; stroke-linecap:round; fill:none; pointer-events:none; }
+  .direction { stroke:currentColor; stroke-width:2; fill:none; }
+  .led { fill:var(--line); stroke:var(--muted); } .lit { fill:var(--active); stroke:var(--active); }
+  .warning { fill:var(--error-color,#db625a); } .button { cursor:pointer; }
+  [role=button]:focus .button { stroke:var(--primary-color,#369ac7); stroke-width:3; }
+  [aria-disabled=true] { opacity:.65; cursor:default; } [role=button] text { pointer-events:none; }
+  .pipe { fill:none; stroke-width:13; stroke-linecap:round; stroke-linejoin:round; opacity:.18; }
+  .flow { fill:none; stroke-width:3; stroke-dasharray:5 13; stroke-linecap:round; animation:flow var(--speed) linear infinite; }
+  .cold { stroke:var(--cold); } .warm { stroke:var(--warm); }
+  .stopped { animation:none!important; opacity:.28; } .spin { animation:spin var(--speed) linear infinite; }
+  .heater { stroke:var(--line); fill:none; stroke-width:4; } .hot { stroke:var(--active); }
+  .cell { fill:var(--surface); stroke:var(--line); stroke-width:2; }
+  .fin { stroke:var(--line); stroke-width:2; opacity:.7; } .badge { fill:var(--line); fill-opacity:.35; }
+  .error { padding:0 20px 12px; color:var(--error-color,#db625a); font-size:12px; }
+  @keyframes flow { to { stroke-dashoffset:-36; } } @keyframes spin { to { transform:rotate(360deg); } }
+  @media(prefers-reduced-motion:reduce) { .flow,.spin { animation:none!important; } }
+`;
+const svgText = (x, y, text, cls = "", anchor = "start") =>
+  `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${escapeGraphic(text)}</text>`;
+function graphicButton(x, y, w, h, label, action, disabled = false, glyph = label) {
+  return `<g role="button" tabindex="${disabled ? -1 : 0}" aria-label="${escapeGraphic(label)}" aria-disabled="${disabled}" data-action="${action}">
+    <rect class="button" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/>
+    ${["increase", "decrease"].includes(action)
+      ? `<path class="control-symbol" d="M${x + w / 2 - 16} ${y + h / 2}h32${action === "increase" ? `M${x + w / 2} ${y + h / 2 - 16}v32` : ""}"/>`
+      : svgText(x + w / 2, y + h / 2 + 7, glyph, "", "middle")}</g>`;
+}
+function graphicSvg(title, content, duration, height = 760) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 ${height}" role="group"
+    aria-label="${escapeGraphic(title)}" style="--speed:${duration}"><title>${escapeGraphic(title)}</title>${content}</svg>`;
+}
+function renderControllerSvg(m) {
+  const { e, t, g } = m;
+  const leds = [
+    [m.power !== null || e.status || e.climate || e.fan, g.power, m.power],
+    [e.post_heating, t.post_heating, m.flag("post_heating")],
+    [e.front_heating, t.front_heating, m.flag("front_heating")],
+    [e.summer_mode, t.summer_mode, m.flag("summer_mode")],
+    [e.service_needed || e.filter_warning, g.filter, m.anyFlag(["service_needed", "filter_warning"])],
+    [m.config.show?.alarms !== false && ALARM_ROLES.some((r) => e[r]), g.alarm,
+      m.alarm ? true : ALARM_ROLES.some((r) => e[r] && m.value(r) === null) ? null : false],
+    [e.co2, t.co2, m.number("co2") !== null ? true : null],
+    [e.humidity || e.humidity_2, t.humidity, m.number("humidity") !== null || m.number("humidity_2") !== null ? true : null],
+  ].filter(([present]) => present);
+  let content = `<rect class="body" x="24" y="24" width="552" height="712" rx="28"/>
+    <path class="strip" d="M52 24H548Q576 24 576 52V88H24V52Q24 24 52 24Z"/>`
+    + svgText(48, 63, m.unit.name, "title");
+  content += leds.map(([, label, active], i) => {
+    const x = 56 + (i % 3) * 168, y = 120 + Math.floor(i / 3) * 38;
+    return `<circle cx="${x}" cy="${y - 6}" r="6" class="led ${active ? "lit" : ""}"><title>${escapeGraphic(label)}</title></circle>`
+      + svgText(x + 14, y, active === null ? `${label} —` : label, "muted");
+  }).join("");
+  content += `<rect class="lcd" x="48" y="222" width="504" height="196" rx="18"/>`
+    + svgText(72, 252, e.climate ? t.fan_speed : g.core_fan, "muted")
+    + svgText(72, 322, e.climate ? `${m.level ?? "—"} / ${m.max}` :
+      (m.fanPercentage ?? m.formatted("fan_speed", " %")), "big");
+  const readout = m.readouts[m.selected];
+  if (readout) content += svgText(72, 362, readout[0], "muted") + svgText(72, 398, readout[1], "value");
+  if (m.readouts.length > 1) content += graphicButton(476, 336, 52, 32, g.previous, "previous", false, "▲")
+    + graphicButton(476, 376, 52, 32, g.next, "next", false, "▼");
+  if (m.canFan) content += graphicButton(48, 434, 240, 60, g.decrease, "decrease", !m.modes.some((v) => Number(v) < m.level), "−")
+    + graphicButton(312, 434, 240, 60, g.increase, "increase", !m.modes.some((v) => Number(v) > m.level), "+");
+  const actions = [];
+  if (e.boost_switch) actions.push([m.boost ? `${g.boost} · ${e.boost_remaining && m.config.show?.boost_remaining !== false ? m.formatted("boost_remaining", ` ${t.minutes}`) : g.active}` : t.boost_switch, "boost",
+    m.boost || !graphicAvailable(m.hass?.states[e.boost_switch])]);
+  if (m.canHeat) actions.push([g.heating, "heat", false]);
+  if (e.shower_boost && m.preset && m.config.show?.shower_boost !== false) actions.push([t.shower_boost, "shower",
+    !graphicAvailable(m.hass.states[e.shower_boost])]);
+  content += actions.map(([label, action, disabled], i) => graphicButton(48, 510 + i * 58, 504, 48, label, action, disabled)).join("");
+  if (m.boost && e.boost_remaining && m.config.show?.boost_remaining !== false) {
+    content += svgText(300, 714, `${t.boost_remaining}: ${m.formatted("boost_remaining", ` ${t.minutes}`)}`, "muted", "middle");
+  }
+  return graphicSvg(g.controller, content, m.duration);
+}
+
+function renderExchangerSvg(m) {
+  const { e, t, g } = m;
+  const bypass = m.on("summer_mode");
+  let content = svgText(32, 40, g.exchanger, "title") + svgText(32, 72, m.unit.name, "muted")
+    + '<rect class="body" x="30" y="178" width="540" height="456" rx="24"/>'
+    + '<path class="cell" d="M300 234L390 300V410L300 476L210 410V300Z"/>';
+  for (let y = 300; y <= 410; y += 14) content += `<path class="fin" d="M220 ${y}H380"/>`;
+  // Continuous diagonals cross inside the cell, beneath the recovery label.
+  const ducts = [
+    ["outdoor", 520, bypass ? "M520 178V550H180V220H380V178" : "M520 178V550H420L300 354", "cold", "motor_in", true],
+    ["supply", 380, bypass ? "M380 220H450V198H380V178" : "M300 354L450 290V198H380V178", bypass ? "cold" : "warm", "motor_in", false],
+    ["extract", 220, "M220 178V250L300 354", "warm", "motor_out", true],
+    ["exhaust", 80, "M300 354L180 510H80V178", "cold", "motor_out", false],
+  ];
+  content += ducts.filter(([r]) => e[r]).map(([r, x, path, color, motor, incoming]) =>
+    svgText(x, 116, t[r], "muted", "middle") + svgText(x, 150, m.formatted(r, " °C"), "value", "middle")
+    + `<path class="direction" aria-label="${incoming ? "↓" : "↑"}" d="${incoming ? `M${x + 40} 132v22m-5 -5l5 5 5 -5` : `M${x + 40} 154v-22m-5 5l5 -5 5 5`}"/>
+      <path class="pipe ${color}" d="${path}"/>
+      <path data-stream="${r}" class="flow ${color} ${m.running(motor) ? "" : "stopped"}" d="${path}"/>
+      <rect class="body" x="${x - 19}" y="168" width="38" height="22" rx="5"/>`).join("");
+  if (e.efficiency || [e.outdoor, e.extract, e.exhaust].every(Boolean)) {
+    content += '<rect class="cell" x="194" y="270" width="212" height="64" rx="10"/>'
+      + svgText(300, 295, t.efficiency, "muted", "middle")
+      + svgText(300, 323, m.efficiency === null ? "—" : `${Math.round(m.efficiency)} %`, "value", "middle");
+  }
+  const fan = (role, x, y) => !e[role] ? "" : `<g transform="translate(${x} ${y})">
+    <circle class="body" r="27"/><g data-motor="${role}" class="${m.running(role) ? "spin" : "stopped"}">
+    <path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/>
+    </g><circle r="4" fill="var(--surface)"/></g>`;
+  content += fan("motor_out", 80, 440) + fan("motor_in", bypass ? 520 : 450, bypass ? 320 : 260);
+  const heater = (role, x, y, labelX, labelY, anchor) => !e[role] ? "" : `<path data-heater="${role}" class="heater ${m.on(role) ? "hot" : ""}"
+    d="M${x - 24} ${y}l8 -12 8 24 8 -24 8 24 8 -24 8 12"/>`
+    + svgText(labelX, labelY, m.value(role) === null ? `${t[role]} —` : t[role], "muted", anchor);
+  content += heater("front_heating", 476, 550, 540, 602, "end")
+    + heater("post_heating", 415, 198, 300, 204, "middle");
+  if (e.outdoor) content += '<path class="fin" d="M496 430L544 464M496 438L544 472M496 446L544 480"/>'
+    + svgText(360, 578, g.filter_f7, "muted", "middle");
+  if (e.summer_mode) {
+    content += `<g data-bypass="${bypass ? "open" : "closed"}">
+      <circle class="led" cx="180" cy="550" r="5"/>
+      <path class="heater ${bypass ? "hot" : ""}" d="${bypass ? "M180 550L210 520" : "M180 550V510"}"/></g>`
+      + svgText(60, 602, m.value("summer_mode") === null ? `${g.bypass} —` : bypass ? g.bypass_open : g.bypass_closed, "muted");
+  }
+  const badges = [];
+  if (e.climate || e.fan_speed || e.fan) badges.push(`${t.fan_speed}: ${e.climate ? m.level ?? "—" : m.fanPercentage ?? m.formatted("fan_speed", " %")}`);
+  if (m.boost && m.config.show?.boost_remaining !== false) badges.push(`${g.boost} · ${e.boost_remaining ? m.formatted("boost_remaining", ` ${t.minutes}`) : g.active}`);
+  if (m.on("cell_freeze_alarm") && m.config.show?.alarms !== false) badges.push(g.freeze);
+  if (m.alarm && m.config.show?.alarms !== false) badges.push(g.alarm);
+  content += badges.map((label, i) => {
+    const x = 30 + i % 2 * 276, y = 652 + Math.floor(i / 2) * 48;
+    return `<rect class="badge" x="${x}" y="${y}" width="264" height="38" rx="19"/>`
+      + svgText(x + 132, y + 26, label, "muted", "middle");
+  }).join("");
+  if (m.alarm && m.config.show?.alarms !== false) content += '<circle class="warning" cx="550" cy="195" r="8"/>';
+  return graphicSvg(g.exchanger, content, m.duration);
+}
+
+class ValloxGraphicCard extends HTMLElement {
+  static getStubConfig() { return { view: "controller" }; }
+  setConfig(config) {
+    if (!config || (config.view && !["controller", "exchanger"].includes(config.view))) throw new Error("view: controller | exchanger");
+    this._config = { ...config, view: config.view || "controller" };
+    this._readout = 0;
+    this._signature = null;
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+      this.shadowRoot.addEventListener("click", (event) => this._activate(event));
+      this.shadowRoot.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); if (!event.repeat) this._activate(event); }
+      });
+    }
+    if (this._hass) this.hass = this._hass;
+  }
+  set hass(hass) {
+    this._hass = hass;
+    if (!this._config) return;
+    const m = this._model();
+    const signature = JSON.stringify([hass.locale, hass.language, m.unit.name, m.e,
+      Object.values(m.e).map((id) => hass.states[id])]);
+    if (signature === this._signature) return;
+    this._signature = signature;
+    this._render(m);
+  }
+  getCardSize() { return 8; }
+  getGridOptions() { return { columns: 12, min_columns: 6, rows: 8 }; }
+  _model() {
+    const m = graphicModel(this._hass, this._config, this._readout);
+    return m;
+  }
+  _render(m = this._model()) {
+    const focused = this.shadowRoot.activeElement?.getAttribute("data-action");
+    this.shadowRoot.innerHTML = `<style>${GRAPHIC_CSS}</style><ha-card>${
+      this._config.view === "controller" ? renderControllerSvg(m) : renderExchangerSvg(m)
+    }<div class="error" role="status">${this._error ? escapeGraphic(m.g.action_error) : ""}</div></ha-card>`;
+    if (focused) this.shadowRoot.querySelector(`[data-action="${focused}"]`)?.focus();
+  }
+  _activate(event) {
+    const target = event.target.closest?.("[data-action]");
+    if (this._config.view !== "controller" || !target || target.getAttribute("aria-disabled") === "true") return;
+    this._action(target.getAttribute("data-action"));
+  }
+  async _action(action) {
+    const m = this._model(), e = m.e;
+    if (["next", "previous"].includes(action)) {
+      this._readout += action === "next" ? 1 : -1; this._render(); return;
+    }
+    let call;
+    if (m.canFan && ["increase", "decrease"].includes(action)) {
+      const candidates = m.modes.filter((v) => action === "increase" ? Number(v) > m.level : Number(v) < m.level);
+      const mode = action === "increase" ? candidates[0] : candidates[candidates.length - 1];
+      if (mode) call = ["climate", "set_fan_mode", { entity_id: e.climate, fan_mode: mode }];
+    }
+    if (action === "boost" && e.boost_switch && !m.boost && graphicAvailable(this._hass.states[e.boost_switch])) {
+      call = ["switch", "turn_on", { entity_id: e.boost_switch }];
+    }
+    if (action === "heat" && m.canHeat) call = ["climate", "set_hvac_mode",
+      { entity_id: e.climate, hvac_mode: m.value("climate") === "heat" ? "fan_only" : "heat" }];
+    if (action === "shower" && e.shower_boost && m.preset && m.config.show?.shower_boost !== false
+        && graphicAvailable(this._hass.states[e.shower_boost])) {
+      call = ["script", e.shower_boost.split(".")[1], { level: m.preset.level, minutes: m.preset.minutes }];
+    }
+    if (call) {
+      try { await this._hass.callService(...call); this._error = false; }
+      catch { this._error = true; }
+      this._render();
+    }
+  }
+}
+
+function graphicOverview(hass, u, t, config) {
+  // Start from the established groups, removing only the duplicates below.
+  const base = BUILDERS.overview(hass, u, t, { ...config, style: "tiles" });
+  const show = config.show || {};
+  const duplicate = ["climate", "fan_speed", "boost_switch", "boost_remaining", "outdoor", "supply", "extract", "exhaust",
+    "efficiency", "motor_in", "motor_out", "front_heating", "post_heating", "summer_mode"];
+  const ids = new Set(duplicate.map((r) => u.e[r]).filter(Boolean));
+  let cards = base.cards.filter((c) => !(c.entity && ids.has(c.entity)) &&
+    !(c.content && (c.content.includes(t.temperature_flow) || c.content.includes(t.efficiency))));
+  cards = cards.filter((c, i) => c.heading_style !== "subtitle" ||
+    (cards[i + 1] && cards[i + 1].type !== "heading"));
+  const graphics = ["controller", "exchanger"].filter((view) => show[view] !== false).map((view) => ({
+    type: "custom:vallox-graphic-card", view, ...HALF,
+    device_id: u.deviceId, name: u.name,
+    entities: { ...Object.fromEntries(Object.keys(PACKAGE_ENTITIES).map((r) => [r, null])), ...u.e }, show: { ...show },
+    ...(config.shower_boost_presets ? { shower_boost_presets: config.shower_boost_presets } : {}),
+  }));
+  return section([cards[0], ...graphics, ...cards.slice(1)]);
+}
+
 const BUILDERS = {
   overview(hass, u, t, config = {}) {
     config = config || {};
+    if (config.style === "graphic") return graphicOverview(hass, u, t, config);
     const e = u.e;
     const show = config.show || {};
     // Preserve 1.0 output on older units. The flow can also be explicitly enabled.
@@ -528,6 +839,7 @@ class ValloxDashboardStrategy extends HTMLElement {
 // strategy element". So register into whatever registry is current now and
 // keep checking until Home Assistant's own registry is in place and has ours.
 const ELEMENTS = [
+  ["vallox-graphic-card", ValloxGraphicCard],
   ["ll-strategy-section-vallox-ventilation", ValloxSectionStrategy],
   ["ll-strategy-view-vallox-ventilation", ValloxViewStrategy],
   ["ll-strategy-dashboard-vallox-ventilation", ValloxDashboardStrategy],
@@ -559,4 +871,10 @@ console.info(`%c VALLOX-DASHBOARD %c ${VALLOX_DASHBOARD_VERSION} `,
   "color:white;background:#0b6e4f;font-weight:700", "color:#0b6e4f;background:white");
 
 // Exposed for tests / tooling.
-window.valloxDashboard = { version: VALLOX_DASHBOARD_VERSION, buildSection, buildView, findUnits, SECTIONS };
+window.customCards = window.customCards || [];
+if (!window.customCards.some((c) => c.type === "vallox-graphic-card")) window.customCards.push({
+  type: "vallox-graphic-card", name: "Vallox graphic", description: "Original digital controller / heat exchanger · Digitalregler / Wärmetauscher",
+  preview: true,
+});
+window.valloxDashboard = { version: VALLOX_DASHBOARD_VERSION, buildSection, buildView, findUnits, SECTIONS,
+  graphicModel, renderControllerSvg, renderExchangerSvg };
