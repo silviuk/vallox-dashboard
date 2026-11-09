@@ -9,6 +9,8 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
     const cards = result.cards || result.sections[0].cards;
     check(cards[1].view === "controller" && cards[2].view === "exchanger"
       && cards.slice(1, 3).every((c) => c.type === "custom:vallox-graphic-card"), builder.name + ": graphics lead overview");
+    check(cards.slice(1,3).every(c => c.grid_options.columns === 12 && c.grid_options.rows === "auto"), builder.name + ": graphics fill all twelve phone columns with natural rows");
+    check(cards.find(c => c.entity === roles.switch_type)?.grid_options.columns === 12, builder.name + ": remaining switch tile fills the row");
     check(cards[2].show_status === false && !render("exchanger", hass, cards[2]).includes('aria-label="Fan speed"'),
       builder.name + ": controller suppresses duplicate exchanger status");
     const alone = builder(hass, { style: "graphic", show: { controller: false } });
@@ -24,6 +26,29 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
       check(!JSON.stringify(hidden).includes('"view":"' + view + '"'), builder.name + ": show." + view);
     }
   }
+  for (const builder of [api.buildSection, api.buildView]) {
+    const layoutHass = clone();
+    const layoutRoles = { humidity: "sensor.test_humidity", humidity_2: "sensor.test_humidity_2", co2: "sensor.test_co2" };
+    for (const id of Object.values(layoutRoles)) layoutHass.states[id] = { state: "42", attributes: {} };
+    const cardsFor = (config) => {
+      const result = builder(layoutHass, { ...config, entities: { ...layoutRoles, ...config.entities } });
+      return result.cards || result.sections[0].cards;
+    };
+    const withoutSwitch = { entities: { switch_type: null } };
+    const baseHeadings = cardsFor(withoutSwitch).filter(c => c.type === "heading");
+    const graphicHeadings = cardsFor({ ...withoutSwitch, style: "graphic" }).filter(c => c.type === "heading");
+    check(graphicHeadings.length > 1 && graphicHeadings.every(c =>
+      baseHeadings.some(base => JSON.stringify(base) === JSON.stringify(c))),
+      builder.name + ": no switch_type role leaves headings unchanged");
+    const lone = cardsFor({ style: "graphic", entities: { humidity_2: null, co2: null } });
+    check(lone.find(c => c.entity === layoutRoles.humidity)?.grid_options.columns === 12,
+      builder.name + ": lone half tile in an unrelated group becomes full width");
+    const odd = cardsFor({ style: "graphic" });
+    check(odd.find(c => c.entity === layoutRoles.humidity)?.grid_options.columns === 6
+      && odd.find(c => c.entity === layoutRoles.humidity_2)?.grid_options.columns === 6
+      && odd.find(c => c.entity === layoutRoles.co2)?.grid_options.columns === 12,
+      builder.name + ": paired half tiles unchanged and odd final tile widened");
+  }
   const dash = await defined["ll-strategy-dashboard-vallox-ventilation"].generate({ style: "graphic", show: { controller: false } }, hass);
   const activeBoost = clone(); activeBoost.states[roles.boost_remaining].state = "12";
   const controller = render("controller", activeBoost);
@@ -36,24 +61,26 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
     "standalone status defaults on; show_status hides fan and boost badges");
   const crossing = render("exchanger");
   const paths = [...crossing.matchAll(/data-cell-stream="([^"]+)"[^>]*d="([^"]+)"/g)];
-  check(paths.length === 2 && ["extract", "supply"].every((name) => paths.filter((p) => p[1] === name).length === 1)
-    && crossing.includes('d="M250 260L350 360"') && crossing.includes('d="M250 360L350 260"')
-    && crossing.includes('d="M220 156V230L250 260"') && crossing.includes('d="M350 360L410 420H80V156"')
-    && crossing.includes('d="M520 156V440H180L250 360"') && crossing.includes('d="M350 260L480 232V184H380V156"'),
-    "exactly two bands cross opposite cell faces; return ducts clear the cell");
-  check(crossing.includes('id="extract-gradient"') && crossing.includes('id="supply-gradient"')
-    && crossing.includes('x="92" y="216" width="118" height="80"'), "stream gradients retained; recovery badge sits left of cell clear of ducts");
-  check((crossing.match(/class="cell" d=/g) || []).length === 1
-    && crossing.includes('class="cell-outline" d="M300 210L400 310L300 410L200 310Z"')
-    && crossing.indexOf('class="cell-outline"') > crossing.lastIndexOf('data-stream='),
-    "single cell silhouette has a crisp outline above the streams");
+  check(paths.length === 2 && crossing.includes('d="M350 330L250 498"') && crossing.includes('d="M250 330L350 498"'), "two streams cross opposite faces of the tall cell");
+  check(crossing.includes('id="extract-gradient"') && crossing.includes('id="supply-gradient"') && crossing.includes('x="244" y="552" width="112" height="54"'), "recovery badge sits beside crossing gradients");
+  check((crossing.match(/data-duct=/g)||[]).length === 4 && [...crossing.matchAll(/data-port="(\d)"/g)].map(p=>p[1]).join('') === '4123', "four round Modell R ports preserve manual numbering and order");
+  check((crossing.match(/data-fan=/g)||[]).length === 2 && crossing.includes('translate(480 390)') && crossing.includes('translate(110 498)'), "supply fan upper right and extract fan lower left");
+  check(crossing.includes('data-filter="F7"') && crossing.includes('data-filter="G3"') && crossing.includes('data-component="cell"') && crossing.includes('unit-casing'), "pleated filters, tall cell and upright casing");
+  check(crossing.indexOf('class="cell-outline"') > crossing.lastIndexOf('data-stream='), "crisp cell outline above streams");
+  check(!crossing.includes('data-bypass-route=') && !crossing.includes('class="plate"'), "closed bypass has no route; cell has no decorative hatching");
+  for (const [part, name, stream] of [["filter","F7","supply"],["filter","G3","extract"],["fan","motor_in","supply"],["fan","motor_out","extract"]]) {
+    check(crossing.includes('data-' + part + '="' + name + '" data-on-stream="' + stream + '"'), name + ": component belongs to its stream");
+  }
+  check(crossing.includes('M210 194V300L250 330') && crossing.includes('M370 194V300L350 330')
+    && crossing.includes('M350 498H480V240H510V194') && crossing.includes('M250 498H80V194'), "four separate exterior lanes join cell faces through filters, heaters and fans");
+  check(crossing.includes('M190 284l8 -10') && crossing.includes('M460 280l8 -10'), "pre/post heaters intersect the supply inlet/outlet lanes");
+  for (const role of ["outdoor","extract","supply","exhaust"]) check(crossing.includes('data-temperature="' + role + '"'), role + ": temperature belongs to its numbered duct");
   const actionRects = [...controller.matchAll(/data-action="(boost|heat|shower)"[^]*?<rect[^>]*x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"/g)];
   check(actionRects.length === 3 && actionRects.every((r) => r[3] === "370" && Number(r[5]) * 294 / 600 >= 40)
     && new Set(actionRects.map((r) => r[2])).size === 3
     && !vm.runInContext("GRAPHIC_CSS", context).includes('.actions [data-action='),
     "three actions share one row with at least 40 px tap height at a 320 px viewport");
-  check(controller.includes('height="452" rx="24"') && controller.includes('viewBox="0 0 600 500"')
-    && crossing.includes('viewBox="0 0 600 500"'), "equal card heights; controller action bottom padding equals 24 px side padding");
+  check(controller.includes('class="housing"') && controller.includes('recessed-lcd') && controller.includes('viewBox="0 0 600 500"') && crossing.includes('viewBox="0 0 600 676"'), "bezel housing and recessed LCD; SVGs use natural proportions");
   check(dash.views[0].strategy.style === "graphic" && dash.views[0].strategy.show.controller === false, "dashboard propagates graphic config");
   const core = JSON.parse(fs.readFileSync(new URL("fixture_core.json", import.meta.url)));
   const coreCards = api.buildSection(core, { style: "graphic" }).cards;
@@ -95,12 +122,30 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
   check(!model(stopped).running("motor_in") && model(stopped).running("motor_out"), "each motor controls its own flow");
   const bypass = clone(); bypass.states[roles.summer_mode].state = "on"; bypass.states[roles.cell_freeze_alarm].state = "on";
   check(render("exchanger", bypass).includes('data-bypass="open"') && render("exchanger", bypass).includes("Cell freeze"), "bypass and freeze alarm highlights");
+  const summer = render("exchanger", bypass);
+  check(summer.includes('data-bypass-route="supply"') && !summer.includes('data-cell-stream="supply"') && summer.includes('data-cell-stream="extract"'), "summer routes supply around core while extract keeps recovering path");
+  const bypassRoute = summer.match(/data-bypass-route="supply"[^>]*d="([^"]+)"/);
+  check(summer.includes('d="M210 194V300H170"')
+    && bypassRoute?.[1] === "M170 300V550H100V612H410V574H480"
+    && summer.includes('d="M480 574V240H510V194"')
+    && !summer.includes('d="M250 330L350 498"')
+    && !summer.includes('d="M350 498H480V240H510V194"'),
+    "bypass runs after F7/preheater beside the cell, below the badge, through the bottom flap to supply fan and port 3");
+  const beforeBypassFix = api.renderExchangerSvg.toString()
+    .replace('bypass ? "M210 194V300H170" : "M210 194V300L250 330"', '"M210 194V300L250 330"')
+    .replace('bypass ? "M480 574V240H510V194" : "M350 498H480V240H510V194"', '"M350 498H480V240H510V194"')
+    .replace('"M170 300V550H100V612H410V574H480"', '"M250 330L300 310L380 378V460L350 498"');
+  check(vm.runInContext("(" + beforeBypassFix + ")", context)(model()) === crossing,
+    "winter SVG remains byte-identical to before the bypass fix");
   const texts = JSON.parse(vm.runInContext("JSON.stringify(GRAPHIC_TEXT)", context));
   check(JSON.stringify(Object.keys(texts.en).sort()) === JSON.stringify(Object.keys(texts.de).sort())
     && Object.values(texts.de).every(Boolean), "graphic EN/DE label parity");
   check(render("controller", { ...hass, locale: { language: "de" } }).includes("Digitalregler")
     && render("exchanger", { ...hass, locale: { language: "de" } }).includes("Wärmetauscher"), "graphic German labels");
   const Card = defined["vallox-graphic-card"], card = new Card();
+  check(card.getGridOptions().rows === "auto" && card.getGridOptions().min_columns === 12 && card.getCardSize() === 7, "natural grid rows and compact controller masonry estimate");
+  card._config = { view: "exchanger" };
+  check(card.getCardSize() === 8, "taller exchanger masonry estimate");
   let renders = 0, html = "", calls = [];
   const listeners = {};
   card.attachShadow = () => {
