@@ -1,0 +1,393 @@
+# Home Assistant 2025.1+ shower and humidity boost package.
+# Install with homeassistant: packages: !include_dir_named packages
+# Adjust ALL occurrences of climate.ventilation and switch.ventilation_switch
+# (vallox2mqtt defaults) to your unit. This package controls ONE unit.
+# Also adjust binary_sensor.ventilation (the vallox2mqtt unit power/status sensor).
+# Replace sensor.bathroom_humidity below with your bathroom humidity sensor.
+# For more bathrooms, duplicate the threshold trigger and add sensors to rise.
+# Auto humidity boost is optional, defaults OFF on first creation, then restores.
+
+input_boolean:
+  vallox_shower_boost_active:
+    name: Vallox shower boost active
+    icon: mdi:shower-head
+  vallox_shower_boost_prev_on:
+    name: Vallox shower boost was previously on
+    icon: mdi:power
+  vallox_auto_humidity_boost:
+    name: Vallox auto humidity boost
+    icon: mdi:water-percent
+
+input_number:
+  # No initial value on saved state: it must survive a Home Assistant restart.
+  vallox_shower_boost_prev_level:
+    name: Vallox shower boost previous level
+    min: 1
+    max: 8
+    step: 1
+    mode: box
+  vallox_shower_boost_target_level:
+    name: Vallox shower boost target level
+    min: 1
+    max: 8
+    step: 1
+    mode: box
+  vallox_auto_humidity_threshold:
+    name: Vallox auto humidity threshold
+    min: 40
+    max: 95
+    step: 1
+    initial: 65
+    unit_of_measurement: "%"
+  vallox_auto_humidity_rise:
+    name: Vallox auto humidity rise
+    min: 1
+    max: 30
+    step: 1
+    initial: 8
+    unit_of_measurement: "%"
+  vallox_auto_humidity_boost_level:
+    name: Vallox auto humidity boost level
+    min: 1
+    max: 8
+    step: 1
+    initial: 6
+  vallox_auto_humidity_boost_minutes:
+    name: Vallox auto humidity boost minutes
+    min: 1
+    max: 120
+    step: 1
+    initial: 30
+    unit_of_measurement: min
+
+timer:
+  vallox_shower_boost:
+    name: Vallox shower boost
+    duration: "00:15:00"
+    restore: true
+  vallox_auto_humidity_cooldown:
+    name: Vallox auto humidity cooldown
+    duration: "01:00:00"
+    restore: true
+
+script:
+  vallox_shower_boost:
+    alias: Vallox shower boost
+    description: Timed fan boost; repeat taps restart the duration without overwriting the saved level.
+    icon: mdi:shower-head
+    # Serialize repeat taps so the original fan level is saved only once.
+    mode: queued
+    max: 10
+    fields:
+      level:
+        name: Fan level
+        required: true
+        default: 6
+        selector:
+          number:
+            min: 1
+            max: 8
+            step: 1
+      minutes:
+        name: Minutes
+        required: true
+        default: 15
+        selector:
+          number:
+            min: 1
+            max: 120
+            step: 1
+    sequence:
+      - variables:
+          target_level: "{{ level | default(6) | int(0) }}"
+          boost_minutes: "{{ minutes | default(15) | int(0) }}"
+          current_level: "{{ state_attr('climate.ventilation', 'fan_mode') | int(0) }}"
+          unit_on: "{{ is_state('binary_sensor.ventilation', 'on') }}"
+          already_active: "{{ is_state('input_boolean.vallox_shower_boost_active', 'on') }}"
+      - condition: state
+        entity_id: switch.ventilation_switch
+        state: "off"
+      - condition: template
+        value_template: >-
+          {{ 1 <= target_level <= 8 and 1 <= boost_minutes <= 120
+             and 1 <= current_level <= 8
+             and states('binary_sensor.ventilation') in ['on', 'off']
+             and states('climate.ventilation') not in ['unknown', 'unavailable'] }}
+      - if:
+          - condition: template
+            value_template: "{{ not already_active }}"
+        then:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.vallox_shower_boost_prev_level
+            data:
+              value: "{{ current_level }}"
+          - if:
+              - condition: template
+                value_template: "{{ unit_on }}"
+            then:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.vallox_shower_boost_prev_on
+            else:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.vallox_shower_boost_prev_on
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.vallox_shower_boost_target_level
+        data:
+          value: "{{ target_level }}"
+      # Set ownership and timer before commanding the fan, so a failed action
+      # still has a bounded cleanup path. Abort automations ignore our own writes.
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.vallox_shower_boost_active
+      - action: timer.start
+        target:
+          entity_id: timer.vallox_shower_boost
+        data:
+          duration: "{{ boost_minutes * 60 }}"
+      # Recheck after taking ownership, so a built-in boost that started while
+      # helpers were being saved cannot be overwritten by the soft boost.
+      - if:
+          - condition: template
+            value_template: "{{ not is_state('switch.ventilation_switch', 'off') }}"
+        then:
+          - action: timer.cancel
+            target:
+              entity_id: timer.vallox_shower_boost
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.vallox_shower_boost_active
+          - stop: Built-in boost owns the fan
+      - if:
+          - condition: template
+            value_template: "{{ not unit_on }}"
+        then:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: climate.ventilation
+            data:
+              hvac_mode: fan_only
+      - action: climate.set_fan_mode
+        target:
+          entity_id: climate.ventilation
+        data:
+          fan_mode: "{{ target_level | string }}"
+      # Keep abort automation quiet during the transition. If reporting is late,
+      # retain ownership and the timer so timer completion can still restore.
+      - wait_template: "{{ state_attr('climate.ventilation', 'fan_mode') | int(0) == target_level }}"
+        timeout: "00:01:00"
+        continue_on_timeout: true
+
+  vallox_shower_boost_restore:
+    alias: Vallox shower boost restore
+    description: Restore only while the soft boost still owns the current fan setting.
+    icon: mdi:fan-chevron-down
+    mode: single
+    sequence:
+      - condition: state
+        entity_id: input_boolean.vallox_shower_boost_active
+        state: "on"
+      - variables:
+          previous: "{{ states('input_number.vallox_shower_boost_prev_level') | int(0) }}"
+          may_restore: >-
+            {{ is_state('switch.ventilation_switch', 'off')
+               and is_state('binary_sensor.ventilation', 'on')
+               and states('climate.ventilation') not in ['off', 'unknown', 'unavailable']
+               and state_attr('climate.ventilation', 'fan_mode') | int(0)
+                   == states('input_number.vallox_shower_boost_target_level') | int(-1) }}
+      # Release ownership before writing so the manual-change automation cannot race restore.
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.vallox_shower_boost_active
+      - action: timer.cancel
+        target:
+          entity_id: timer.vallox_shower_boost
+      - condition: template
+        value_template: "{{ may_restore and 1 <= previous <= 8 }}"
+      - action: climate.set_fan_mode
+        target:
+          entity_id: climate.ventilation
+        data:
+          fan_mode: "{{ previous | string }}"
+
+  vallox_shower_boost_cancel:
+    alias: Vallox shower boost cancel
+    icon: mdi:cancel
+    mode: single
+    sequence:
+      - action: script.turn_off
+        target:
+          entity_id: script.vallox_shower_boost
+      - action: timer.cancel
+        target:
+          entity_id: timer.vallox_shower_boost
+      - action: script.vallox_shower_boost_restore
+
+automation:
+  - id: vallox_shower_boost_restore_on_timer
+    alias: Vallox shower boost restore when timer finishes
+    mode: single
+    triggers:
+      - trigger: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.vallox_shower_boost
+    actions:
+      - action: script.vallox_shower_boost_restore
+
+  - id: vallox_shower_boost_restore_on_startup
+    alias: Vallox shower boost cleanup after restart
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+    actions:
+      # A restored timer may have expired while HA was stopped (no finished event).
+      - wait_template: >-
+          {{ states('climate.ventilation') not in ['unknown', 'unavailable']
+             and state_attr('climate.ventilation', 'fan_mode') | int(0) in range(1, 9)
+             and states('binary_sensor.ventilation') in ['on', 'off']
+             and states('switch.ventilation_switch') in ['on', 'off'] }}
+        timeout: "00:02:00"
+        continue_on_timeout: true
+      - if:
+          - condition: template
+            value_template: "{{ not wait.completed }}"
+        then:
+          - action: timer.cancel
+            target:
+              entity_id: timer.vallox_shower_boost
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.vallox_shower_boost_active
+        else:
+          - if:
+              - condition: state
+                entity_id: timer.vallox_shower_boost
+                state: idle
+            then:
+              - action: script.vallox_shower_boost_restore
+            else:
+              - if:
+                  - condition: template
+                    value_template: >-
+                      {{ not is_state('switch.ventilation_switch', 'off')
+                         or not is_state('binary_sensor.ventilation', 'on')
+                         or is_state('climate.ventilation', 'off')
+                         or state_attr('climate.ventilation', 'fan_mode') | int(0)
+                            != states('input_number.vallox_shower_boost_target_level') | int(-1) }}
+                then:
+                  - action: timer.cancel
+                    target:
+                      entity_id: timer.vallox_shower_boost
+                  - action: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.vallox_shower_boost_active
+
+  - id: vallox_shower_boost_abort_on_builtin_boost
+    alias: Vallox shower boost yield to built-in boost
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: switch.ventilation_switch
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.vallox_shower_boost_active
+        state: "on"
+    actions:
+      - action: script.turn_off
+        target:
+          entity_id: script.vallox_shower_boost
+      - action: timer.cancel
+        target:
+          entity_id: timer.vallox_shower_boost
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.vallox_shower_boost_active
+
+  - id: vallox_shower_boost_abort_on_manual_fan_change
+    alias: Vallox shower boost yield to external fan changes
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: climate.ventilation
+        attribute: fan_mode
+      - trigger: state
+        entity_id: climate.ventilation
+        to: "off"
+      - trigger: state
+        entity_id: binary_sensor.ventilation
+        to: "off"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.vallox_shower_boost_active
+        state: "on"
+      - condition: state
+        entity_id: script.vallox_shower_boost
+        state: "off"
+      - condition: template
+        value_template: >-
+          {{ is_state('climate.ventilation', 'off')
+             or is_state('binary_sensor.ventilation', 'off')
+             or state_attr('climate.ventilation', 'fan_mode') | int(0)
+                != states('input_number.vallox_shower_boost_target_level') | int(-1) }}
+    actions:
+      - action: timer.cancel
+        target:
+          entity_id: timer.vallox_shower_boost
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.vallox_shower_boost_active
+
+  - id: vallox_auto_humidity_shower_boost
+    alias: Vallox auto humidity shower boost
+    description: Optional threshold or rapid-rise trigger, with a one-hour cooldown.
+    mode: single
+    triggers:
+      # PLACEHOLDER: replace this humidity entity. The helper is the actual
+      # trigger threshold, so changing it works below or above the default 65%.
+      - trigger: numeric_state
+        entity_id: sensor.bathroom_humidity
+        above: input_number.vallox_auto_humidity_threshold
+        for:
+          minutes: 1
+        id: threshold
+      - trigger: state
+        entity_id:
+          - sensor.bathroom_humidity
+        id: rise
+    conditions:
+      - condition: state
+        entity_id: input_boolean.vallox_auto_humidity_boost
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.vallox_shower_boost_active
+        state: "off"
+      - condition: state
+        entity_id: switch.ventilation_switch
+        state: "off"
+      - condition: state
+        entity_id: timer.vallox_auto_humidity_cooldown
+        state: idle
+      - condition: template
+        value_template: >-
+          {% set old = trigger.from_state.state | float(none) if trigger.from_state is not none else none %}
+          {% set new = trigger.to_state.state | float(none) if trigger.to_state is not none else none %}
+          {{ (trigger.id == 'threshold' and new is number
+              and new > states('input_number.vallox_auto_humidity_threshold') | float(65))
+             or (trigger.id == 'rise' and old is number and new is number
+                 and new >= 55 and new - old >= states('input_number.vallox_auto_humidity_rise') | float(8)) }}
+    actions:
+      - action: script.vallox_shower_boost
+        data:
+          level: "{{ states('input_number.vallox_auto_humidity_boost_level') | int(6) }}"
+          minutes: "{{ states('input_number.vallox_auto_humidity_boost_minutes') | int(30) }}"
+      - action: timer.start
+        target:
+          entity_id: timer.vallox_auto_humidity_cooldown
+        data:
+          duration: "01:00:00"

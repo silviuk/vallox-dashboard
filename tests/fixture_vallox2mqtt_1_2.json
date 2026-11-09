@@ -1,0 +1,587 @@
+{
+  "entities": {
+    "script.vallox_shower_boost_restore": {
+      "entity_id": "script.vallox_shower_boost_restore",
+      "platform": "script",
+      "device_id": null,
+      "translation_key": null
+    },
+    "script.vallox_shower_boost_cancel": {
+      "entity_id": "script.vallox_shower_boost_cancel",
+      "platform": "script",
+      "device_id": null,
+      "translation_key": null
+    },
+    "script.vallox_shower_boost": {
+      "entity_id": "script.vallox_shower_boost",
+      "platform": "script",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_number.vallox_shower_boost_prev_level": {
+      "entity_id": "input_number.vallox_shower_boost_prev_level",
+      "platform": "input_number",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_number.vallox_shower_boost_target_level": {
+      "entity_id": "input_number.vallox_shower_boost_target_level",
+      "platform": "input_number",
+      "device_id": null,
+      "translation_key": null
+    },
+    "timer.vallox_shower_boost": {
+      "entity_id": "timer.vallox_shower_boost",
+      "platform": "timer",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_boolean.vallox_shower_boost_prev_on": {
+      "entity_id": "input_boolean.vallox_shower_boost_prev_on",
+      "platform": "input_boolean",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_boolean.vallox_shower_boost_active": {
+      "entity_id": "input_boolean.vallox_shower_boost_active",
+      "platform": "input_boolean",
+      "device_id": null,
+      "translation_key": null
+    },
+    "climate.ventilation": {
+      "entity_id": "climate.ventilation",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "switch.ventilation_switch": {
+      "entity_id": "switch.ventilation_switch",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation": {
+      "entity_id": "binary_sensor.ventilation",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_motor_in": {
+      "entity_id": "binary_sensor.ventilation_motor_in",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_motor_out": {
+      "entity_id": "binary_sensor.ventilation_motor_out",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_summer_mode": {
+      "entity_id": "binary_sensor.ventilation_summer_mode",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_front_heating": {
+      "entity_id": "binary_sensor.ventilation_front_heating",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_service_needed": {
+      "entity_id": "binary_sensor.ventilation_service_needed",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_post_heating": {
+      "entity_id": "binary_sensor.ventilation_post_heating",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_outside_temperature": {
+      "entity_id": "sensor.ventilation_outside_temperature",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_inside_temperature": {
+      "entity_id": "sensor.ventilation_inside_temperature",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_incoming_temperature": {
+      "entity_id": "sensor.ventilation_incoming_temperature",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_exhaust_temperature": {
+      "entity_id": "sensor.ventilation_exhaust_temperature",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_service_counter": {
+      "entity_id": "sensor.ventilation_service_counter",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_switch_type": {
+      "entity_id": "sensor.ventilation_switch_type",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_bypass_setpoint": {
+      "entity_id": "sensor.ventilation_bypass_setpoint",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_defrost_hysteresis_raw": {
+      "entity_id": "sensor.ventilation_defrost_hysteresis_raw",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_filter_warning": {
+      "entity_id": "binary_sensor.ventilation_filter_warning",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_defrost_setpoint": {
+      "entity_id": "sensor.ventilation_defrost_setpoint",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_post_heating_target": {
+      "entity_id": "sensor.ventilation_post_heating_target",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_maximum_fan_speed": {
+      "entity_id": "sensor.ventilation_maximum_fan_speed",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_defrost_hysteresis": {
+      "entity_id": "sensor.ventilation_defrost_hysteresis",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_fault_code": {
+      "entity_id": "sensor.ventilation_fault_code",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_cell_freeze_alarm": {
+      "entity_id": "binary_sensor.ventilation_cell_freeze_alarm",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_preheat_setpoint": {
+      "entity_id": "sensor.ventilation_preheat_setpoint",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "binary_sensor.ventilation_error_relay": {
+      "entity_id": "binary_sensor.ventilation_error_relay",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "sensor.ventilation_boost_remaining": {
+      "entity_id": "sensor.ventilation_boost_remaining",
+      "platform": "vallox2mqtt",
+      "device_id": "dev_mqtt",
+      "translation_key": null
+    },
+    "input_boolean.vallox_auto_humidity_boost": {
+      "entity_id": "input_boolean.vallox_auto_humidity_boost",
+      "platform": "input_boolean",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_number.vallox_auto_humidity_rise": {
+      "entity_id": "input_number.vallox_auto_humidity_rise",
+      "platform": "input_number",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_number.vallox_auto_humidity_boost_level": {
+      "entity_id": "input_number.vallox_auto_humidity_boost_level",
+      "platform": "input_number",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_number.vallox_auto_humidity_boost_minutes": {
+      "entity_id": "input_number.vallox_auto_humidity_boost_minutes",
+      "platform": "input_number",
+      "device_id": null,
+      "translation_key": null
+    },
+    "timer.vallox_auto_humidity_cooldown": {
+      "entity_id": "timer.vallox_auto_humidity_cooldown",
+      "platform": "timer",
+      "device_id": null,
+      "translation_key": null
+    },
+    "input_number.vallox_auto_humidity_threshold": {
+      "entity_id": "input_number.vallox_auto_humidity_threshold",
+      "platform": "input_number",
+      "device_id": null,
+      "translation_key": null
+    }
+  },
+  "states": {
+    "script.vallox_shower_boost_restore": {
+      "state": "off",
+      "attributes": {
+        "mode": "single",
+        "friendly_name": "vallox shower boost restore"
+      }
+    },
+    "script.vallox_shower_boost_cancel": {
+      "state": "off",
+      "attributes": {
+        "mode": "single",
+        "friendly_name": "vallox shower boost cancel"
+      }
+    },
+    "script.vallox_shower_boost": {
+      "state": "off",
+      "attributes": {
+        "mode": "restart",
+        "friendly_name": "vallox shower boost"
+      }
+    },
+    "input_number.vallox_shower_boost_prev_level": {
+      "state": "3.0",
+      "attributes": {
+        "unit_of_measurement": "level",
+        "min": 1,
+        "max": 8,
+        "step": 1,
+        "mode": "box",
+        "friendly_name": "vallox shower boost prev level"
+      }
+    },
+    "input_number.vallox_shower_boost_target_level": {
+      "state": "6.0",
+      "attributes": {
+        "unit_of_measurement": "level",
+        "min": 6,
+        "max": 7,
+        "step": 1,
+        "mode": "box",
+        "friendly_name": "vallox shower boost target level"
+      }
+    },
+    "timer.vallox_shower_boost": {
+      "state": "idle",
+      "attributes": {
+        "duration": "0:15:00",
+        "restore": true,
+        "friendly_name": "vallox shower boost"
+      }
+    },
+    "input_boolean.vallox_shower_boost_prev_on": {
+      "state": "on",
+      "attributes": {
+        "friendly_name": "vallox shower boost prev on"
+      }
+    },
+    "input_boolean.vallox_shower_boost_active": {
+      "state": "off",
+      "attributes": {
+        "friendly_name": "vallox shower boost active"
+      }
+    },
+    "climate.ventilation": {
+      "state": "fan_only",
+      "attributes": {
+        "hvac_modes": [
+          "heat",
+          "fan_only"
+        ],
+        "fan_modes": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "fan_mode": "6",
+        "hvac_action": "fan",
+        "temperature": 20,
+        "current_temperature": 7,
+        "min_temp": 10,
+        "max_temp": 27,
+        "target_temp_step": 1,
+        "supported_features": 9,
+        "friendly_name": "ventilation"
+      }
+    },
+    "switch.ventilation_switch": {
+      "state": "off",
+      "attributes": {
+        "friendly_name": "ventilation switch"
+      }
+    },
+    "binary_sensor.ventilation": {
+      "state": "on",
+      "attributes": {
+        "mode": "FAN",
+        "friendly_name": "ventilation"
+      }
+    },
+    "binary_sensor.ventilation_motor_in": {
+      "state": "on",
+      "attributes": {
+        "friendly_name": "ventilation motor in"
+      }
+    },
+    "binary_sensor.ventilation_motor_out": {
+      "state": "on",
+      "attributes": {
+        "friendly_name": "ventilation motor out"
+      }
+    },
+    "binary_sensor.ventilation_summer_mode": {
+      "state": "off",
+      "attributes": {
+        "friendly_name": "ventilation summer mode"
+      }
+    },
+    "binary_sensor.ventilation_front_heating": {
+      "state": "off",
+      "attributes": {
+        "friendly_name": "ventilation front heating"
+      }
+    },
+    "binary_sensor.ventilation_service_needed": {
+      "state": "off",
+      "attributes": {
+        "device_class": "problem",
+        "friendly_name": "ventilation service needed"
+      }
+    },
+    "binary_sensor.ventilation_post_heating": {
+      "state": "off",
+      "attributes": {
+        "friendly_name": "ventilation post heating"
+      }
+    },
+    "sensor.ventilation_outside_temperature": {
+      "state": "6",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation outside temperature"
+      }
+    },
+    "sensor.ventilation_inside_temperature": {
+      "state": "16",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation inside temperature"
+      }
+    },
+    "sensor.ventilation_incoming_temperature": {
+      "state": "7",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation incoming temperature"
+      }
+    },
+    "sensor.ventilation_exhaust_temperature": {
+      "state": "10",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation exhaust temperature"
+      }
+    },
+    "sensor.ventilation_service_counter": {
+      "state": "8",
+      "attributes": {
+        "unit_of_measurement": "Months",
+        "friendly_name": "ventilation service counter"
+      }
+    },
+    "sensor.ventilation_switch_type": {
+      "state": "boost",
+      "attributes": {
+        "friendly_name": "ventilation switch type"
+      }
+    },
+    "sensor.ventilation_bypass_setpoint": {
+      "state": "12",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation bypass setpoint"
+      }
+    },
+    "sensor.ventilation_defrost_hysteresis_raw": {
+      "state": "9",
+      "attributes": {
+        "friendly_name": "ventilation defrost hysteresis raw"
+      }
+    },
+    "binary_sensor.ventilation_filter_warning": {
+      "state": "off",
+      "attributes": {
+        "device_class": "problem",
+        "friendly_name": "ventilation filter warning"
+      }
+    },
+    "sensor.ventilation_defrost_setpoint": {
+      "state": "3",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation defrost setpoint"
+      }
+    },
+    "sensor.ventilation_post_heating_target": {
+      "state": "20",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation post heating target"
+      }
+    },
+    "sensor.ventilation_maximum_fan_speed": {
+      "state": "8",
+      "attributes": {
+        "friendly_name": "ventilation maximum fan speed"
+      }
+    },
+    "sensor.ventilation_defrost_hysteresis": {
+      "state": "3",
+      "attributes": {
+        "unit_of_measurement": "K",
+        "friendly_name": "ventilation defrost hysteresis"
+      }
+    },
+    "sensor.ventilation_fault_code": {
+      "state": "0",
+      "attributes": {
+        "friendly_name": "ventilation fault code"
+      }
+    },
+    "binary_sensor.ventilation_cell_freeze_alarm": {
+      "state": "off",
+      "attributes": {
+        "device_class": "problem",
+        "friendly_name": "ventilation cell freeze alarm"
+      }
+    },
+    "sensor.ventilation_preheat_setpoint": {
+      "state": "-6",
+      "attributes": {
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "friendly_name": "ventilation preheat setpoint"
+      }
+    },
+    "binary_sensor.ventilation_error_relay": {
+      "state": "off",
+      "attributes": {
+        "device_class": "problem",
+        "friendly_name": "ventilation error relay"
+      }
+    },
+    "sensor.ventilation_boost_remaining": {
+      "state": "0",
+      "attributes": {
+        "device_class": "duration",
+        "unit_of_measurement": "min",
+        "friendly_name": "ventilation boost remaining"
+      }
+    },
+    "input_boolean.vallox_auto_humidity_boost": {
+      "state": "off",
+      "attributes": {
+        "friendly_name": "vallox auto humidity boost"
+      }
+    },
+    "input_number.vallox_auto_humidity_rise": {
+      "state": "8.0",
+      "attributes": {
+        "unit_of_measurement": "%",
+        "min": 3,
+        "max": 20,
+        "step": 1,
+        "mode": "box",
+        "friendly_name": "vallox auto humidity rise"
+      }
+    },
+    "input_number.vallox_auto_humidity_boost_level": {
+      "state": "6.0",
+      "attributes": {
+        "unit_of_measurement": "level",
+        "min": 6,
+        "max": 7,
+        "step": 1,
+        "mode": "box",
+        "friendly_name": "vallox auto humidity boost level"
+      }
+    },
+    "input_number.vallox_auto_humidity_boost_minutes": {
+      "state": "30.0",
+      "attributes": {
+        "unit_of_measurement": "min",
+        "min": 15,
+        "max": 30,
+        "step": 15,
+        "mode": "box",
+        "friendly_name": "vallox auto humidity boost minutes"
+      }
+    },
+    "timer.vallox_auto_humidity_cooldown": {
+      "state": "idle",
+      "attributes": {
+        "duration": "1:00:00",
+        "restore": true,
+        "friendly_name": "vallox auto humidity cooldown"
+      }
+    },
+    "input_number.vallox_auto_humidity_threshold": {
+      "state": "65.0",
+      "attributes": {
+        "unit_of_measurement": "%",
+        "min": 50,
+        "max": 90,
+        "step": 1,
+        "mode": "box",
+        "friendly_name": "vallox auto humidity threshold"
+      }
+    }
+  },
+  "devices": {
+    "dev_mqtt": {
+      "name": "Ventilation"
+    }
+  }
+}

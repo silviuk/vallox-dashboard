@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Only built-in Home Assistant cards are used. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.0.0";
+const VALLOX_DASHBOARD_VERSION = "1.1.0";
 
 const TEXT = {
   en: {
@@ -29,6 +29,18 @@ const TEXT = {
     setpoints: "Supply air targets", target_home: "Home", target_away: "Away", target_boost: "Boost",
     temps_48h: "Air temperatures (48 h)", air_24h: "Indoor air (24 h)", activity_24h: "Activity (24 h)",
     history: "Ventilation history",
+    alarms: "Alarms", filter_warning: "Filter warning", error_relay: "Error relay",
+    cell_freeze_alarm: "Cell freeze alarm", fault_code: "Fault code",
+    alarm_alert: "The unit reports an alarm. Check the alarm tiles below.",
+    boost_remaining: "Built-in boost time left", unit_setpoints: "Unit setpoints (read-only)",
+    bypass_setpoint: "Bypass setpoint", preheat_setpoint: "Preheat setpoint", defrost_setpoint: "Defrost setpoint",
+    defrost_hysteresis: "Defrost hysteresis", post_heating_target: "Post-heating target", maximum_fan_speed: "Maximum fan level",
+    temperature_flow: "Temperature flow", shower_boost: "Shower boost", shower_timer: "Shower boost time left",
+    shower_cancel: "Cancel shower boost", level: "Level", minutes: "min",
+    auto_humidity: "Auto humidity boost", auto_humidity_enabled: "Enable humidity boost",
+    auto_humidity_threshold: "Humidity threshold", auto_humidity_rise: "Humidity rise",
+    auto_humidity_level: "Humidity boost level", auto_humidity_minutes: "Humidity boost duration",
+    auto_humidity_cooldown: "Humidity boost cooldown",
     no_unit: "No Vallox ventilation unit found. Install the vallox2mqtt or the core Vallox integration, or set entities in the strategy config.",
     unknown_section: "Unknown vallox-dashboard section",
   },
@@ -50,6 +62,18 @@ const TEXT = {
     setpoints: "Zuluft-Sollwerte", target_home: "Zuhause", target_away: "Abwesend", target_boost: "Boost",
     temps_48h: "Lufttemperaturen (48 h)", air_24h: "Raumluft (24 h)", activity_24h: "Aktivität (24 h)",
     history: "Lüftungsverlauf",
+    alarms: "Alarme", filter_warning: "Filterwarnung", error_relay: "Störmelderelais",
+    cell_freeze_alarm: "Frostalarm am Tauscher", fault_code: "Fehlercode",
+    alarm_alert: "Das Gerät meldet einen Alarm. Bitte die Alarmkacheln unten prüfen.",
+    boost_remaining: "Geräte-Boost Restzeit", unit_setpoints: "Geräte-Sollwerte (nur Anzeige)",
+    bypass_setpoint: "Bypass-Sollwert", preheat_setpoint: "Vorheiz-Sollwert", defrost_setpoint: "Abtau-Sollwert",
+    defrost_hysteresis: "Abtau-Hysterese", post_heating_target: "Nachheiz-Sollwert", maximum_fan_speed: "Maximale Lüfterstufe",
+    temperature_flow: "Temperaturfluss", shower_boost: "Dusch-Boost", shower_timer: "Dusch-Boost Restzeit",
+    shower_cancel: "Dusch-Boost abbrechen", level: "Stufe", minutes: "Min.",
+    auto_humidity: "Automatischer Feuchte-Boost", auto_humidity_enabled: "Feuchte-Boost aktivieren",
+    auto_humidity_threshold: "Feuchteschwelle", auto_humidity_rise: "Feuchteanstieg",
+    auto_humidity_level: "Feuchte-Boost Lüfterstufe", auto_humidity_minutes: "Feuchte-Boost Dauer",
+    auto_humidity_cooldown: "Feuchte-Boost Sperrzeit",
     no_unit: "Kein Vallox-Lüftungsgerät gefunden. Installiere vallox2mqtt oder die Vallox-Core-Integration oder gib die Entitäten in der Strategie-Konfiguration an.",
     unknown_section: "Unbekannter vallox-dashboard-Abschnitt",
   },
@@ -78,11 +102,33 @@ const MQTT_PATTERNS = [
   ["sensor", /(^|_)rh_?1$|humidity_?1$/, "humidity"], ["sensor", /(^|_)rh_?2$|humidity_?2$/, "humidity_2"],
   ["sensor", /co2$/, "co2"], ["sensor", /service_counter/, "service_counter"],
   ["sensor", /switch_type/, "switch_type"],
+  ["sensor", /fault_code$/, "fault_code"], ["sensor", /boost_remaining$/, "boost_remaining"],
+  ["sensor", /bypass_setpoint$/, "bypass_setpoint"], ["sensor", /preheat_setpoint$/, "preheat_setpoint"],
+  ["sensor", /defrost_setpoint$/, "defrost_setpoint"], ["sensor", /defrost_hysteresis$/, "defrost_hysteresis"],
+  ["sensor", /post_heating_target$/, "post_heating_target"], ["sensor", /maximum_fan_speed$/, "maximum_fan_speed"],
+  ["binary_sensor", /filter_warning$/, "filter_warning"], ["binary_sensor", /error_relay$/, "error_relay"],
+  ["binary_sensor", /cell_freeze_alarm$/, "cell_freeze_alarm"],
   ["binary_sensor", /service_needed/, "service_needed"], ["binary_sensor", /motor_in$/, "motor_in"],
   ["binary_sensor", /motor_out$/, "motor_out"], ["binary_sensor", /summer_mode/, "summer_mode"],
   ["binary_sensor", /front_heating/, "front_heating"], ["binary_sensor", /post_heating/, "post_heating"],
   ["binary_sensor", /.*/, "status"], ["climate", /.*/, "climate"], ["switch", /.*/, "boost_switch"],
 ];
+
+// Package helpers are not integration entities. Resolve only these known defaults;
+// other installations can override them with entities (including null to suppress).
+const PACKAGE_ENTITIES = {
+  shower_boost: "script.vallox_shower_boost", shower_timer: "timer.vallox_shower_boost",
+  shower_active: "input_boolean.vallox_shower_boost_active", shower_cancel: "script.vallox_shower_boost_cancel",
+  auto_humidity_enabled: "input_boolean.vallox_auto_humidity_boost",
+  auto_humidity_threshold: "input_number.vallox_auto_humidity_threshold",
+  auto_humidity_rise: "input_number.vallox_auto_humidity_rise",
+  auto_humidity_level: "input_number.vallox_auto_humidity_boost_level",
+  auto_humidity_minutes: "input_number.vallox_auto_humidity_boost_minutes",
+  auto_humidity_cooldown: "timer.vallox_auto_humidity_cooldown",
+};
+const ALARM_ROLES = ["filter_warning", "error_relay", "cell_freeze_alarm", "fault_code"];
+const SETPOINT_ROLES = ["bypass_setpoint", "preheat_setpoint", "defrost_setpoint", "defrost_hysteresis", "post_heating_target", "maximum_fan_speed"];
+const SHOWER_PRESETS = [{ minutes: 15, level: 6 }, { minutes: 15, level: 7 }, { minutes: 30, level: 6 }, { minutes: 30, level: 7 }];
 
 function texts(hass) {
   const lang = ((hass.locale && hass.locale.language) || hass.language || "en").split("-")[0];
@@ -138,10 +184,17 @@ function pickUnits(hass, config) {
   config = config || {};
   let units = findUnits(hass);
   if (config.device_id) units = units.filter((u) => u.deviceId === config.device_id);
+  units = units.map((u, i) => {
+    const e = { ...u.e };
+    // The default package controls one unit: attach it only to the first selected unit.
+    if (i === 0) for (const [role, id] of Object.entries(PACKAGE_ENTITIES)) if (exists(hass, id)) e[role] = id;
+    return { ...u, e };
+  });
   if (config.entities) {
     // Manual mapping (or overrides): {outdoor: "sensor.x", climate: "climate.y", ...}
     const base = units[0] || { deviceId: null, platform: "manual", name: "Vallox", e: {}, all: [] };
     const e = { ...base.e };
+    if (!units.length) for (const [role, id] of Object.entries(PACKAGE_ENTITIES)) if (exists(hass, id)) e[role] = id;
     for (const [role, id] of Object.entries(config.entities)) if (id) e[role] = id; else delete e[role];
     units = [{ ...base, e }];
   }
@@ -215,7 +268,67 @@ function efficiencyCard(hass, e, t) {
   };
 }
 
-function controlCards(hass, u, t) {
+function alarmBanner(hass, e, t) {
+  const roles = ALARM_ROLES.filter((r) => exists(hass, e[r]));
+  if (!roles.length) return null;
+  return {
+    type: "markdown", text_only: true, ...FULL,
+    visibility: [{ condition: "or", conditions: roles.map((r) => r === "fault_code"
+      ? { condition: "numeric_state", entity: e[r], above: 0 }
+      : isOn(e[r])[0]) }],
+    content: `<ha-alert alert-type="error">${t.alarm_alert}</ha-alert>`,
+  };
+}
+
+function alarmCards(hass, e, t) {
+  return group(t.alarms, "mdi:alert", ALARM_ROLES.map((r) =>
+    tile(hass, e[r], t[r], { icon: "mdi:alert-circle-outline", color: "red" })));
+}
+
+function temperatureFlow(hass, e, t) {
+  if (![e.outdoor, e.supply, e.extract, e.exhaust].every((id) => exists(hass, id))) return null;
+  const temperature = (r) => `**${t[r]}** {{ states('${e[r]}') }} {{ state_attr('${e[r]}', 'unit_of_measurement') or '' }}`;
+  const recovery = exists(hass, e.efficiency)
+    ? `**${t.efficiency}: {{ states('${e.efficiency}') }} %**`
+    : efficiencyCard(hass, e, t).content;
+  return {
+    type: "markdown", ...FULL,
+    content: `### ${t.temperature_flow}\n${temperature("outdoor")} → ${temperature("supply")}\n\n${recovery}\n\n${temperature("extract")} → ${temperature("exhaust")}`,
+  };
+}
+
+function showerCards(hass, e, t, config) {
+  if (!exists(hass, e.shower_boost)) return [];
+  const presets = Array.isArray(config.shower_boost_presets) ? config.shower_boost_presets : SHOWER_PRESETS;
+  const cards = presets.filter((p) => p && Number.isInteger(p.level) && p.level >= 1 && p.level <= 8
+    && Number.isInteger(p.minutes) && p.minutes > 0 && p.minutes <= 120).map((p) => ({
+    type: "button", entity: e.shower_boost, name: `${p.minutes} ${t.minutes} · ${t.level} ${p.level}`,
+    icon: "mdi:shower-head", show_state: false, ...HALF,
+    tap_action: { action: "perform-action", perform_action: e.shower_boost, data: { level: p.level, minutes: p.minutes } },
+    hold_action: { action: "none" },
+  }));
+  if ([e.shower_timer, e.shower_active, e.shower_cancel].every((id) => exists(hass, id))) {
+    cards.push(tile(hass, e.shower_timer, t.shower_timer, { visibility: isOn(e.shower_active), icon: "mdi:timer-sand" }));
+    cards.push({
+      type: "button", entity: e.shower_cancel, name: t.shower_cancel, icon: "mdi:cancel", ...HALF,
+      visibility: isOn(e.shower_active),
+      tap_action: { action: "perform-action", perform_action: e.shower_cancel }, hold_action: { action: "none" },
+    });
+  }
+  return group(t.shower_boost, "mdi:shower-head", cards);
+}
+
+function humidityCards(hass, e, t) {
+  if (!exists(hass, e.auto_humidity_enabled)) return [];
+  return group(t.auto_humidity, "mdi:water-percent", [
+    tile(hass, e.auto_humidity_enabled, t.auto_humidity_enabled),
+    ...["auto_humidity_threshold", "auto_humidity_rise", "auto_humidity_level", "auto_humidity_minutes"].map((r) =>
+      tile(hass, e[r], t[r], { features: [{ type: "numeric-input", style: "buttons" }] })),
+    tile(hass, e.auto_humidity_cooldown, t.auto_humidity_cooldown, { icon: "mdi:timer-lock-outline" }),
+  ]);
+}
+
+function controlCards(hass, u, t, config) {
   const e = u.e;
   const cards = [];
   if (exists(hass, e.fan)) {
@@ -246,13 +359,21 @@ function controlCards(hass, u, t) {
   cards.push(tile(hass, e.profile_duration, t.profile_duration, { icon: "mdi:timer-sand" }));
   cards.push(tile(hass, e.fan_speed, t.fan_speed, { icon: "mdi:speedometer" }));
   cards.push(tile(hass, e.boost_switch, t.boost_switch, { icon: "mdi:rocket-launch", color: "amber" }));
+  if (!config.show || config.show.boost_remaining !== false) {
+    cards.push(tile(hass, e.boost_remaining, t.boost_remaining, { icon: "mdi:timer-sand" }));
+  }
   cards.push(tile(hass, e.switch_type, t.switch_type, { icon: "mdi:gesture-tap-button" }));
   return cards;
 }
 
 const BUILDERS = {
-  overview(hass, u, t) {
+  overview(hass, u, t, config = {}) {
+    config = config || {};
     const e = u.e;
+    const show = config.show || {};
+    // Preserve 1.0 output on older units. The flow can also be explicitly enabled.
+    const flow = show.temperature_flow === true || (show.temperature_flow !== false
+      && [...ALARM_ROLES, ...SETPOINT_ROLES, "boost_remaining"].some((r) => exists(hass, e[r])));
     return section([
       heading(u.name, "mdi:hvac", [
         badge(hass, e.status, { show_state: false }),
@@ -263,7 +384,12 @@ const BUILDERS = {
         type: "markdown", text_only: true, visibility: isOn(e.service_needed),
         content: `<ha-alert alert-type="warning">${t.service_alert}</ha-alert>`,
       } : null,
-      ...controlCards(hass, u, t),
+      show.alarms !== false ? alarmBanner(hass, e, t) : null,
+      ...controlCards(hass, u, t, config),
+      flow ? temperatureFlow(hass, e, t) : null,
+      ...(show.shower_boost !== false ? showerCards(hass, e, t, config) : []),
+      ...(show.auto_humidity !== false ? humidityCards(hass, e, t) : []),
+      ...(show.alarms !== false ? alarmCards(hass, e, t) : []),
       ...group(t.air_temperatures, "mdi:thermometer", [
         tile(hass, e.outdoor, t.outdoor, { icon: "mdi:home-import-outline", color: "teal" }),
         tile(hass, e.supply, t.supply, { icon: "mdi:arrow-right-bold-box-outline", color: "green" }),
@@ -282,6 +408,8 @@ const BUILDERS = {
         tile(hass, e.target_away, t.target_away, { ...THIRD, features: [{ type: "numeric-input", style: "buttons" }] }),
         tile(hass, e.target_boost, t.target_boost, { ...THIRD, features: [{ type: "numeric-input", style: "buttons" }] }),
       ]),
+      ...(show.unit_setpoints !== false ? group(t.unit_setpoints, "mdi:thermometer-lines",
+        SETPOINT_ROLES.map((r) => tile(hass, e[r], t[r], { icon: "mdi:tune", tap_action: { action: "more-info" } }))) : []),
       ...group(t.status, "mdi:list-status", [
         tile(hass, e.motor_in, t.motor_in, { icon: "mdi:fan-chevron-down", color: "blue" }),
         tile(hass, e.motor_out, t.motor_out, { icon: "mdi:fan-chevron-up", color: "blue" }),
@@ -343,10 +471,10 @@ function buildSection(hass, config) {
   if (name !== "all" && !BUILDERS[name]) return errorSection(`${t.unknown_section}: ${name}`);
   const unit = pickUnits(hass, config)[0];
   if (!unit) return errorSection(t.no_unit);
-  if (name !== "all") return BUILDERS[name](hass, unit, t) || { type: "grid", cards: [] };
+  if (name !== "all") return BUILDERS[name](hass, unit, t, config) || { type: "grid", cards: [] };
   const cards = [];
   for (const n of SECTIONS) {
-    const s = BUILDERS[n](hass, unit, t);
+    const s = BUILDERS[n](hass, unit, t, config);
     if (s) cards.push(...(n === "overview" ? s.cards : s.cards.filter((c) => c.type !== "heading")));
   }
   return { type: "grid", cards };
@@ -360,7 +488,7 @@ function buildView(hass, config) {
   const sections = [];
   for (const unit of units) {
     for (const name of wanted) {
-      const s = BUILDERS[name] && BUILDERS[name](hass, unit, t);
+      const s = BUILDERS[name] && BUILDERS[name](hass, unit, t, config);
       if (s) sections.push(s);
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "vallox-dashboard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Home Assistant Lovelace strategies for Vallox ventilation units",
   "license": "MIT",
