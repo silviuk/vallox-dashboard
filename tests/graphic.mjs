@@ -14,6 +14,12 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
   check(css.includes("--cold:#369ac7; --warm:#df8054;")
     && css.includes("--active:var(--state-active-color,#e69b28)")
     && css.includes("var(--primary-color,#369ac7)"), "airflow, amber status and focus accent colours preserved");
+  check(css.includes("max-width:600px") && css.includes("margin-inline:auto")
+    && css.includes("width:100%")
+    && css.includes("animation:flow var(--speed) linear infinite")
+    && css.includes("animation:spin var(--speed) linear infinite")
+    && !/@media\s*\([^)]*(?:min|max)-width[^)]*\)[^{]*\{[^}]*animation\s*:\s*none/.test(css),
+    "graphics fill the card on phones, cap at 600 px on wide layouts, and keep airflow animation at every width");
   const clone = () => structuredClone(hass);
   const model = (h = hass, config = {}) => api.graphicModel(h, config);
   const render = (view, h = hass, config = {}) => api[view === "controller" ? "renderControllerSvg" : "renderExchangerSvg"](model(h, config));
