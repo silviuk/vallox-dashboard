@@ -11,30 +11,43 @@ The phone preview uses a 12-column sections grid and the strategy's own
 with automatic height. Numeric rows emulate 56 px rows with 8 px gaps. Phone padding
 leaves 366 px for cards. The default preview also stacks the cards, at 480 px wide. On `?layout=wide` the cards stay centred and do not exceed the 600 px drawing cap.
 
-Run the local capture script from the repository root:
+The default sample has built-in Boost on (12 minutes remaining), so the Boost button
+is lit. Animation respects the operating system's reduced-motion preference unless
+`?animation=on` is set; `?animation=off` always shows the static flow-direction arrows.
+The default paired preview hides duplicate exchanger status, matching the strategy;
+`?view=exchanger` shows standalone fan/boost badges. Keep the same sample data. This is
+development tooling only; HA loads only `dist/vallox-dashboard.js`.
+
+## Official screenshots
+
+From the repository root, on Linux with Chrome:
+
+```bash
+node tools/render/capture.mjs
+```
+
+Or on Windows:
 
 ```powershell
 ./tools/render/capture.ps1
 ```
 
-It uses Chrome at `C:\Program Files\Google\Chrome\Application\chrome.exe`, blocks
-host resolution, disables background networking, and forces reduced motion.
-It verifies stacked cards, card widths and the 8 px gap to the following tile.
-The script captures and trims all five PNGs to the measured content bounds automatically:
+Both write and trim all five PNGs to the measured content bounds automatically:
 
 | Output in `images/` | Query | Capture viewport |
 | --- | --- | --- |
-| `graphic-light.png` | default | 1200 x 1600 |
-| `graphic-dark.png` | `?theme=dark` | 1200 x 1600 |
-| `graphic-mobile-light.png` | `?layout=phone` | 390 x 1400 |
-| `graphic-mobile-dark.png` | `?layout=phone&theme=dark` | 390 x 1400 |
-| `graphic-mobile-de.png` | `?layout=phone&lang=de` | 390 x 1400 |
+| `graphic-light.png` | `?animation=on` | 1200 x 1600 |
+| `graphic-dark.png` | `?theme=dark&animation=on` | 1200 x 1600 |
+| `graphic-mobile-light.png` | `?layout=phone&animation=on` | 390 x 1400 |
+| `graphic-mobile-dark.png` | `?layout=phone&theme=dark&animation=on` | 390 x 1400 |
+| `graphic-mobile-de.png` | `?layout=phone&lang=de&animation=on` | 390 x 1400 |
 
 Final widths are 536 px for desktop and 390 px for phone; heights follow content.
-The script prints each final size. No manual cropping is needed.
+The scripts print each final size. No manual cropping is needed.
 
-Animation respects the operating system's reduced-motion preference unless `?animation=on`
-is set; `?animation=off` always shows the static flow-direction arrows. The default paired
-preview hides duplicate exchanger status, matching the strategy; `?view=exchanger`
-shows standalone fan/boost badges. Keep the same sample data. This is development
-tooling only; HA loads only `dist/vallox-dashboard.js`.
+Official captures force the animation on and turn reduced motion off, and
+`capture.mjs` seeks the airflow and fans to 40% of their cycle so a still frame
+shows motion (rotated fans, mid-offset dashes, no static arrowheads). Chrome is
+started with host resolution blocked and background networking disabled.
+Both scripts verify stacked cards, card widths and the 8 px gap to the following tile.
+`capture.mjs` also checks that the Boost button is lit and that the airflow animation is running.

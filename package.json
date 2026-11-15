@@ -2,7 +2,7 @@
   "name": "vallox-dashboard",
   "version": "1.2.7",
   "private": true,
-  "description": "Home Assistant Lovelace strategies for Vallox ventilation units",
+  "description": "Graphic wall-controller and animated heat-exchanger Lovelace dashboard for Vallox units (vallox2mqtt and core Vallox)",
   "license": "MIT",
   "type": "module",
   "scripts": {
