@@ -15,11 +15,15 @@ Supported integrations (auto-discovered):
 | [vallox2mqtt](https://github.com/kotope/valloxesp) (ESP8266/ESP32 over RS485) | Vallox Digit SE, ValloPlus SE, and other RS485 models | climate fan modes 1–8, boost/fireplace switch, heating/motor status, service counter |
 | [Vallox](https://www.home-assistant.io/integrations/vallox/) (Home Assistant core) | Vallox MV series (network) | fan with profiles, efficiency, fan RPMs, filter date, supply-air targets, bypass lock |
 
+![Overview and history](images/section-desktop.png)
+
+*Full tiles dashboard: overview at the top, history below. From a real Vallox Digit SE running vallox2mqtt.*
+
 | Overview (mobile) | History (mobile) | Section (desktop column) |
 |---|---|---|
 | ![Overview](images/overview-mobile.png) | ![History](images/history-mobile.png) | ![Section](images/section-desktop.png) |
 
-*Screenshots above are from a real Vallox Digit SE running vallox2mqtt (tiles style).*
+*Mobile and column crops of the same dashboard (tiles style).*
 
 ## What you get
 
