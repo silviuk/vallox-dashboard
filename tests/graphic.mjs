@@ -14,6 +14,39 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
   check(css.includes("--cold:#369ac7; --warm:#df8054;")
     && css.includes("--active:var(--state-active-color,#e69b28)")
     && css.includes("var(--primary-color,#369ac7)"), "airflow, amber status and focus accent colours preserved");
+  const darkComponent = css.match(/:host\(\[data-scheme="dark"\]\) \.component \{([^}]+)\}/);
+  const darkFin = css.match(/:host\(\[data-scheme="dark"\]\) \.fin \{([^}]+)\}/);
+  check(css.includes(".component { fill:var(--muted)")
+    && css.includes(".fin { stroke:var(--line); stroke-width:2; opacity:.7; }")
+    && !!darkComponent && darkComponent[1].includes("fill:var(--primary-text-color,#e1e1e1)")
+    && !!darkFin && darkFin[1].includes("stroke:var(--secondary-text-color,#b0b0b0)")
+    && darkFin[1].includes("opacity:.95"),
+    "filter and duct labels use muted theme text in light mode and primary/secondary theme text in dark mode");
+  const scheme = vm.runInContext("graphicSurfaceScheme", context);
+  check(scheme("#ffffff") === "light" && scheme("rgb(255, 255, 255)") === "light"
+    && scheme("#1c1c1c") === "dark" && scheme("rgb(28, 28, 28)") === "dark"
+    && scheme("rgba(0, 0, 0, 0)") === "light" && scheme("") === "light" && scheme(null) === "light",
+    "surface scheme is dark on the HA dark card background and stays light for white or unknown colours");
+  const luminance = (hex) => {
+    const h = hex.replace("#", "");
+    const rgb = (h.length <= 3 ? [...h].map((c) => c + c) : [h.slice(0, 2), h.slice(2, 4), h.slice(4, 6)])
+      .map((c) => parseInt(c, 16) / 255)
+      .map((s) => (s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  };
+  const contrast = (a, b) => {
+    const [lo, hi] = [luminance(a), luminance(b)].sort((x, y) => x - y);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const darkLabel = darkComponent[1].match(/--primary-text-color,(#[0-9a-f]+)/i)[1];
+  const darkFinFallback = darkFin[1].match(/--secondary-text-color,(#[0-9a-f]+)/i)[1];
+  // Default HA card-background / text colours (frontend ha-style) and our dark fallbacks.
+  check(contrast("#727272", "#ffffff") >= 4.5
+    && contrast(darkLabel, "#1c1c1c") >= 4.5
+    && contrast("#e1e1e1", "#1c1c1c") >= 4.5
+    && contrast("#9b9b9b", "#1c1c1c") >= 4.5
+    && contrast(darkFinFallback, "#1c1c1c") >= 4.5,
+    "filter labels meet WCAG AA on HA light/dark card backgrounds and dark fallback colours");
   check(css.includes("max-width:600px") && css.includes("margin-inline:auto")
     && css.includes("width:100%")
     && css.includes("animation:flow var(--speed) linear infinite")
@@ -90,6 +123,10 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
   check((crossing.match(/data-duct=/g)||[]).length === 4 && [...crossing.matchAll(/data-port="(\d)"/g)].map(p=>p[1]).join('') === '4123', "four round Modell R ports preserve manual numbering and order");
   check((crossing.match(/data-fan=/g)||[]).length === 2 && crossing.includes('translate(480 390)') && crossing.includes('translate(110 498)'), "supply fan upper right and extract fan lower left");
   check(crossing.includes('data-filter="F7"') && crossing.includes('data-filter="G3"') && crossing.includes('data-component="cell"') && crossing.includes('unit-casing'), "pleated filters, tall cell and upright casing");
+  check(/data-filter="F7"[\s\S]*?class="component"[\s\S]*?>F7</.test(crossing)
+    && /data-filter="G3"[\s\S]*?class="component"[\s\S]*?>G3</.test(crossing)
+    && /data-port="1"[\s\S]*?class="component"/.test(crossing),
+    "F7, G3 and duct numbers use the component text style");
   check(crossing.indexOf('class="cell-outline"') > crossing.lastIndexOf('data-stream='), "crisp cell outline above streams");
   check(!crossing.includes('data-bypass-route=') && !crossing.includes('class="plate"'), "closed bypass has no route; cell has no decorative hatching");
   for (const [part, name, stream] of [["filter","F7","supply"],["filter","G3","extract"],["fan","motor_in","supply"],["fan","motor_out","extract"]]) {

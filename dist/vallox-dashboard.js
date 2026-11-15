@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.2.6";
+const VALLOX_DASHBOARD_VERSION = "1.2.7";
 
 const TEXT = {
   en: {
@@ -482,6 +482,8 @@ const GRAPHIC_CSS = `
   .plate { fill:none; stroke:var(--muted); stroke-width:1; opacity:.18; }
   .cell-outline { fill:none; stroke:var(--muted); stroke-width:2; }
   .component { fill:var(--muted); font-size:16px; }
+  :host([data-scheme="dark"]) .component { fill:var(--primary-text-color,#e1e1e1); }
+  :host([data-scheme="dark"]) .fin { stroke:var(--secondary-text-color,#b0b0b0); opacity:.95; }
   .recovery-label { fill:var(--muted); font-size:20px; }
   .error { padding:0 20px 12px; color:var(--error-color,#db625a); font-size:12px; }
   .error:empty { display:none; }
@@ -495,6 +497,32 @@ const GRAPHIC_CSS = `
   :host([data-animation="on"]) .spin { animation:spin var(--speed) linear infinite !important; }
   :host([data-animation="on"]) .stopped, :host([data-animation="on"]) .static-cue { animation:none!important; }
 `;
+const graphicParseColor = (value) => {
+  if (value == null) return null;
+  const s = String(value).trim();
+  let m = s.match(/^#([0-9a-f]{3,8})$/i);
+  if (m) {
+    const h = m[1];
+    const hex = (h.length <= 4 ? [...h].map((c) => c + c).join("") : h).slice(0, 6);
+    return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  }
+  m = s.match(/^rgba?\(\s*([\d.]+)\s*[, ]\s*([\d.]+)\s*[, ]\s*([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)/i);
+  if (!m) return null;
+  const alpha = m[4] == null ? 1 : (String(m[4]).endsWith("%") ? parseFloat(m[4]) / 100 : Number(m[4]));
+  if (alpha === 0) return null;
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
+};
+const graphicLuminance = (rgb) => {
+  const [r, g, b] = rgb.map((c) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const graphicSurfaceScheme = (color) => {
+  const rgb = Array.isArray(color) ? color : graphicParseColor(color);
+  return rgb && graphicLuminance(rgb) <= 0.4 ? "dark" : "light";
+};
 const svgText = (x, y, text, cls = "", anchor = "start") =>
   `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${escapeGraphic(text)}</text>`;
 function graphicButton(x, y, w, h, label, action, disabled = false, glyph = label, pressed = null) {
@@ -666,6 +694,17 @@ class ValloxGraphicCard extends HTMLElement {
       this._config.view === "controller" ? renderControllerSvg(m) : renderExchangerSvg(m)
     }<div class="error" role="status">${this._error ? escapeGraphic(m.g.action_error) : ""}</div></ha-card>`;
     if (focused) this.shadowRoot.querySelector(`[data-action="${focused}"]`)?.focus();
+    this._syncScheme();
+  }
+  connectedCallback() { this._syncScheme(); }
+  _syncScheme() {
+    if (typeof this.setAttribute !== "function") return;
+    let color = null;
+    try {
+      const card = this.shadowRoot?.querySelector?.("ha-card");
+      if (card && typeof getComputedStyle === "function") color = getComputedStyle(card).backgroundColor;
+    } catch (error) { /* offline tests and detached cards keep the light defaults */ }
+    this.setAttribute("data-scheme", graphicSurfaceScheme(color));
   }
   _activate(event) {
     const target = event.target.closest?.("[data-action]");
