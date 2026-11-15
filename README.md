@@ -210,6 +210,12 @@ You can also generate one for your own entities in the browser console of your d
 
 ## Graphic style
 
+The wall-controller and heat-exchanger cards, with airflow dashes and fans in motion. This is the same official sample as the stills later on this page (Boost on, fan level 3):
+
+| Light theme (desktop) | Dark theme (phone) |
+|---|---|
+| ![Graphic style with airflow animation, light](images/graphic-animated-light.gif) | ![Graphic style with airflow animation, dark phone](images/graphic-animated-mobile-dark.gif) |
+
 Add `style: graphic` to any section, view or dashboard strategy to lead with a wall-controller card and a heat-exchanger diagram:
 
 ```yaml
@@ -333,6 +339,7 @@ component orientation; no manual or GPL Helios/Vallox artwork or code is include
 Offline preview and screenshot instructions: [tools/render](tools/render/README.md).
 The harness uses sanitized fixture samples (6/17/21/9 °C, level 3, post-heat on,
 12 minutes of built-in boost, so the Boost button appears lit) with the airflow animation playing.
+Animated GIFs of this view are at the start of this section; the stills below are single frames of the same sample.
 
 | Light theme | Dark theme |
 |---|---|

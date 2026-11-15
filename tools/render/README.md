@@ -51,3 +51,25 @@ shows motion (rotated fans, mid-offset dashes, no static arrowheads). Chrome is
 started with host resolution blocked and background networking disabled.
 Both scripts verify stacked cards, card widths and the 8 px gap to the following tile.
 `capture.mjs` also checks that the Boost button is lit and that the airflow animation is running.
+
+## Official animated captures
+
+The stills above freeze one frame mid-cycle, so the README also ships looping GIFs
+of a full airflow and fan cycle. From the repository root, on Linux with Chrome and ffmpeg:
+
+```bash
+node tools/render/capture-anim.mjs
+```
+
+That writes and trims:
+
+| Output in `images/` | Query | Capture viewport |
+| --- | --- | --- |
+| `graphic-animated-light.gif` (and `.webp`) | `?animation=on` | 1200 x 1600 |
+| `graphic-animated-mobile-dark.gif` (and `.webp`) | `?layout=phone&theme=dark&animation=on` | 390 x 1400 |
+
+Final sizes match the stills (536×1195 desktop, 390×960 phone). Animations are paused and
+stepped through one `--speed` cycle (fan level 3: 0.933 s) so the loop has no jump.
+Default is 16 frames, about 17 fps, looping forever. The script checks that Boost is lit,
+that the animation is present, and that frames actually differ. GitHub's README renderer
+plays the GIFs; the WebP files are smaller optional alternatives.
