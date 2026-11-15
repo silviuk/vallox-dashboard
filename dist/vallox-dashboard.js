@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.2.7";
+const VALLOX_DASHBOARD_VERSION = "1.2.8";
 
 const TEXT = {
   en: {
@@ -748,6 +748,15 @@ function graphicOverview(hass, u, t, config) {
   const ids = new Set(duplicate.map((r) => u.e[r]).filter(Boolean));
   let cards = base.cards.filter((c) => !(c.entity && ids.has(c.entity)) &&
     !(c.content && (c.content.includes(t.temperature_flow) || c.content.includes(t.efficiency))));
+  // vallox2mqtt sets mdi:air-conditioner on binary_sensor.ventilation (the status
+  // role). A heading badge for that entity is rendered by Home Assistant as "A/C"
+  // at the top right. This is only a ventilation unit, so drop that badge here.
+  // Outdoor temperature and service-needed badges stay. Tiles style is unchanged.
+  if (cards[0]?.type === "heading" && u.e.status) {
+    const badges = (cards[0].badges || []).filter((b) => b.entity !== u.e.status);
+    cards[0] = { ...cards[0], badges };
+    if (!cards[0].badges.length) delete cards[0].badges;
+  }
   cards = cards.filter((c, i) => c.heading_style !== "subtitle" ||
     (cards[i + 1] && cards[i + 1].type !== "heading"));
   const graphics = ["controller", "exchanger"].filter((view) => show[view] !== false).map((view) => ({

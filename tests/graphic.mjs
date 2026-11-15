@@ -94,9 +94,9 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
     const withoutSwitch = { entities: { switch_type: null } };
     const baseHeadings = cardsFor(withoutSwitch).filter(c => c.type === "heading");
     const graphicHeadings = cardsFor({ ...withoutSwitch, style: "graphic" }).filter(c => c.type === "heading");
-    check(graphicHeadings.length > 1 && graphicHeadings.every(c =>
+    check(graphicHeadings.length > 1 && graphicHeadings.filter(c => c.heading_style !== "title").every(c =>
       baseHeadings.some(base => JSON.stringify(base) === JSON.stringify(c))),
-      builder.name + ": no switch_type role leaves headings unchanged");
+      builder.name + ": no switch_type role leaves non-title headings unchanged");
     const lone = cardsFor({ style: "graphic", entities: { humidity_2: null, co2: null } });
     check(lone.find(c => c.entity === layoutRoles.humidity)?.grid_options.columns === 12,
       builder.name + ": lone half tile in an unrelated group becomes full width");
@@ -105,6 +105,19 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
       && odd.find(c => c.entity === layoutRoles.humidity_2)?.grid_options.columns === 6
       && odd.find(c => c.entity === layoutRoles.co2)?.grid_options.columns === 12,
       builder.name + ": paired half tiles unchanged and odd final tile widened");
+  }
+  const acText = /A\/C|air-?condition/i;
+  const dictionaries = vm.runInContext("JSON.stringify([TEXT, GRAPHIC_TEXT])", context);
+  check(!acText.test(dictionaries), "user-visible text dictionaries have no A/C or air-conditioning wording");
+  for (const builder of [api.buildSection, api.buildView]) {
+    const result = builder(hass, { style: "graphic" });
+    const cards = result.cards || result.sections[0].cards;
+    const title = cards.find((c) => c.type === "heading" && c.heading_style === "title");
+    check(roles.status && (title?.badges || []).every((b) => b.entity !== roles.status),
+      builder.name + ": graphic heading omits the status badge Home Assistant labels A/C");
+    const visible = JSON.stringify(title) + render("controller") + render("exchanger")
+      + render("controller", hass, { view: "controller" }) + render("exchanger", hass, { show_status: true });
+    check(!acText.test(visible), builder.name + ": graphic heading and SVGs render no A/C text");
   }
   const dash = await defined["ll-strategy-dashboard-vallox-ventilation"].generate({ style: "graphic", show: { controller: false } }, hass);
   const activeBoost = clone(); activeBoost.states[roles.boost_remaining].state = "12";

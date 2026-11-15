@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/silviuk/vallox-dashboard.svg)](https://github.com/silviuk/vallox-dashboard/releases)
 [![Validate](https://github.com/silviuk/vallox-dashboard/actions/workflows/validate.yml/badge.svg)](https://github.com/silviuk/vallox-dashboard/actions/workflows/validate.yml)
 
-A Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation). Current release: **1.2.7**.
+A Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation). Current release: **1.2.8**.
 
 | Light theme (desktop) | Dark theme (phone) |
 |---|---|
@@ -23,7 +23,7 @@ Supported integrations (auto-discovered):
 
 ## What you get
 
-- **Graphic dashboard (recommended):** a wall-controller card (status LEDs, fan speed +/−, Boost / Heating / Shower) and an animated ValloPlus-style heat-exchanger diagram. Enable it with `style: graphic`. The `animation` option is `auto`, `on` or `off`.
+- **Graphic dashboard (recommended, 1.2.8):** a wall-controller card (status LEDs, fan speed +/−, Boost / Heating / Shower) and an animated ValloPlus-style heat-exchanger diagram. Enable it with `style: graphic`. The `animation` option is `auto`, `on` or `off`.
 - **Controls:** fan speed (vallox2mqtt modes 1–8, or core profiles and fan speed), heating mode, and the boost/fireplace switch.
 - **Air temperatures:** outdoor, supply, extract and exhaust, with colour-coded icons.
 - **Heat recovery:** the unit's efficiency sensor when present; otherwise a guarded estimate `(extract − exhaust) ÷ (extract − outdoor)`, shown only when extract minus outdoor is at least **4 K**, clamped to 0–100%.
@@ -330,6 +330,7 @@ component orientation; no manual or GPL Helios/Vallox artwork or code is include
 
 ### Recent graphic updates
 
+- **1.2.8** — Drop the heading status badge that Home Assistant showed as "A/C" (this is a ventilation unit).
 - **1.2.7** — Brighter F7/G3 labels, duct numbers and filter pleats in dark mode.
 - **1.2.6** — `animation: auto|on|off`, static arrows under reduced motion, and lit Boost/Heating/Shower buttons.
 - **1.2.5** — 600 px width cap so the complete animation stays visible on tablets and laptops.
