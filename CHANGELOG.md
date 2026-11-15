@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.7
+
+- Raise the contrast of the F7 and G3 filter labels, duct numbers and filter pleats in dark mode so the labels meet WCAG AA against the card background in the default Home Assistant dark theme and with the dark fallback colours. The light-mode look is unchanged.
+- On a dark card background, those labels use `--primary-text-color` and the pleats use `--secondary-text-color`, with neutral gray fallbacks; light-mode colours stay on the existing muted and divider theme variables.
+- Preserve the 1.2.6 behaviour and look: animation option, active buttons, 1.2.1 flat artwork, neutral gray surfaces, 600 px wide-layout cap, full-width stacked phone cards and the ValloPlus exchanger shape.
+
 ## 1.2.6
 
 - Keep the airflow and fan animation playing by default, but respect `prefers-reduced-motion` (Windows "Animation effects" / "Animate controls and elements inside windows" off, Android "Remove animations", and similar settings). While motion is off, static arrowheads still show the flow direction.
