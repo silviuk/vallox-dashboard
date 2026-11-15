@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/silviuk/vallox-dashboard.svg)](https://github.com/silviuk/vallox-dashboard/releases)
 [![Validate](https://github.com/silviuk/vallox-dashboard/actions/workflows/validate.yml/badge.svg)](https://github.com/silviuk/vallox-dashboard/actions/workflows/validate.yml)
 
-A Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation). Current release: **1.2.5**.
+A Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation). Current release: **1.2.6**.
 
 It ships as **section, view and dashboard strategies** under `custom:vallox-ventilation`. The UI discovers your entities and skips anything missing or disabled, so there is nothing you have to wire up by hand. The default style uses built-in Home Assistant cards (tile, heading, button, history-graph, markdown). An opt-in graphic style adds one bundled custom card with original inline SVG artwork.
 
@@ -34,7 +34,7 @@ Supported integrations (auto-discovered):
 - **Temperature flow strip:** outdoor → supply, heat recovery, extract → exhaust, when all four temperatures exist. Defaults on for units that already expose 1.2 extras; older units keep their original layout unless you opt in.
 - **Optional shower boost:** timed fan-level buttons, plus countdown and cancel while active, when the package entities exist.
 - **Optional auto humidity boost:** enable toggle and helper tiles when those helpers exist.
-- **Graphic style (1.2.5):** digital controller panel and heat-exchanger diagram (see below).
+- **Graphic style (1.2.6):** digital controller panel and heat-exchanger diagram (see below).
 - English and German labels, taken from your Home Assistant language. Light and dark themes follow HA CSS variables.
 
 ## Installation
@@ -98,6 +98,7 @@ All options are optional and work for every strategy type.
 | `entities` | auto | Override or add entities by role, e.g. `outdoor: sensor.my_outdoor_temp`. Set a role to `null` to hide it. |
 | `show` | see below | Turn each group off independently. Existing groups are unaffected. |
 | `shower_boost_presets` | 15 min L6, 15 min L7, 30 min L6, 30 min L7 | List of `{minutes, level}` objects. Whole minutes 1–120 and fan levels 1–8; invalid entries are skipped. `[]` removes preset buttons. Your script must support the chosen values. |
+| `animation` | `auto` | Graphic style only. `auto` plays the airflow and fan animation unless the device asks for reduced motion; `on` always plays it; `off` never does and shows static flow-direction arrows instead. |
 
 Roles for `entities`: `climate`, `fan`, `boost_switch`, `switch_type`, `profile`, `profile_duration`, `fan_speed`,
 `outdoor`, `supply`, `extract`, `exhaust`, `supply_cell`, `efficiency`, `humidity`, `humidity_2`, `co2`,
@@ -209,12 +210,13 @@ You can also generate one for your own entities in the browser console of your d
 
 ## Graphic style
 
-Add `style: graphic` to any section, view or dashboard strategy (1.2.0+; phone layout and artwork updated in 1.2.3; neutral gray palette in 1.2.4; wide-layout animation size in 1.2.5):
+Add `style: graphic` to any section, view or dashboard strategy (1.2.0+; phone layout and artwork updated in 1.2.3; neutral gray palette in 1.2.4; wide-layout size cap in 1.2.5; tablet animation option and active buttons in 1.2.6):
 
 ```yaml
 strategy:
   type: custom:vallox-ventilation
   style: graphic
+  animation: auto    # auto | on | off
   show:
     controller: true
     exchanger: true
@@ -225,6 +227,7 @@ Both graphics are also available directly, using the same resource:
 ```yaml
 type: custom:vallox-graphic-card
 view: controller   # or exchanger
+# animation: auto            # auto | on | off
 # device_id: your_device_id
 # name: Ventilation
 # show_status: true          # exchanger only; default true
@@ -245,16 +248,19 @@ The card picker lists **Vallox graphic**; change `view` in YAML to select the ex
 
 ### Digital controller
 
-The 1.2.5 controller keeps the 1.2.4 neutral gray surfaces with the 1.2.3 flat panel, header strip, LCD and rounded rectangular buttons, and the full-width phone sizing introduced in 1.2.2. On tablets and laptops the drawing is centred and capped at 600 px so the whole panel stays visible.
+The 1.2.6 controller keeps the 1.2.4 neutral gray surfaces with the 1.2.3 flat panel, header strip, LCD and rounded rectangular buttons, and the full-width phone sizing introduced in 1.2.2. On tablets and laptops the drawing is centred and capped at 600 px so the whole panel stays visible.
 The panel shows a read-only power indicator and available heater, bypass, service,
 alarm, CO₂ and humidity indicators. Its LCD shows fan level with adjacent −/+ controls and a secondary readout;
 ▲/▼ cycle available temperatures, recovery, built-in boost time and fault code locally.
 The +/− buttons call `climate.set_fan_mode` with string modes from `"1"` to `"8"`,
 bounded by the advertised `fan_modes` and `maximum_fan_speed`. Sparse advertised modes
 are stepped through in order. Heating toggles `heat` / `fan_only` only when both modes
-are advertised. Boost calls only `switch.turn_on`: an active boost is disabled because
-vallox2mqtt cannot cancel it from HA. The shower button calls the first valid
-`shower_boost_presets` entry (default 15 minutes, level 6) when the package script exists.
+are advertised, and the button shows the 1.2.1 flat on-state (soft accent fill, `aria-pressed`)
+while `climate` is in `heat`. Boost calls only `switch.turn_on`: an active boost stays
+on-state but disabled because vallox2mqtt cannot cancel it from HA (the switch is on
+or `boost_remaining` is greater than zero). The shower button calls the first valid
+`shower_boost_presets` entry (default 15 minutes, level 6) when the package script exists,
+and shows as on while `shower_active` is on or the shower timer is `active`.
 All writes require a click/tap or Enter/Space; no service is called while rendering.
 
 ### Heat exchanger
@@ -275,7 +281,15 @@ Directional dashed streams and fan animation follow fan level and stop when the 
 or the corresponding motor is off. On wide tablet and laptop layouts the drawing stays
 within 600 px (the SVG viewBox width) and is centred in the card, so the complete airflow
 and fans stay in view at the designed size; on a phone the card still fills the column.
-Reduced-motion preferences disable all animation.
+The `animation` option defaults to `auto`: the streams and fans move unless the browser
+or OS asks for reduced motion. Windows reports this when **Animation effects** or
+**Animate controls and elements inside windows** is off (`SPI_GETCLIENTAREAANIMATION`).
+Android does the same for **Remove animations**, animator duration scale off, or some
+battery-saver modes. In that case the dashes stop and static arrowheads still show the
+flow direction. Set `animation: on` on the strategy or card if you want the subtle
+motion anyway; `animation: off` always uses the static arrows. After an update, reset
+the Home Assistant Companion frontend cache or hard-refresh the browser if a device
+still shows an older build.
 Temperatures, recovery, heating, bypass, boost and alarm highlights update from HA states.
 
 ### Roles used by the graphics
@@ -288,7 +302,7 @@ Temperatures, recovery, heating, bypass, boost and alarm highlights update from 
 | Fans / heaters / bypass | `motor_in`, `motor_out`, `front_heating`, `post_heating`, `summer_mode` |
 | Service / alarms | `service_needed`, `filter_warning`, `error_relay`, `cell_freeze_alarm`, `fault_code` > 0 |
 | Built-in boost | `boost_switch`, `boost_remaining` (minutes) |
-| Optional indicators / shower | `co2`, `humidity`, `humidity_2`, `shower_boost` |
+| Optional indicators / shower | `co2`, `humidity`, `humidity_2`, `shower_boost`, `shower_active`, `shower_timer` |
 
 Missing roles are omitted; unavailable numeric readings show **—**. Recovery is an
 estimate unless an efficiency sensor exists. Indicators show reported states, not sensor
@@ -314,7 +328,7 @@ component orientation; no manual or GPL Helios/Vallox artwork or code is include
 
 Offline preview and screenshot instructions: [tools/render](tools/render/README.md).
 The harness uses sanitized fixture samples (6/17/21/9 °C, level 3, post-heat on,
-12 minutes of built-in boost); its buttons record mock service calls only.
+12 minutes of built-in boost, so the Boost button appears on); its buttons record mock service calls only.
 
 | Light theme | Dark theme |
 |---|---|
