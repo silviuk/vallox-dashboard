@@ -22,7 +22,7 @@
   .heading { font-size:16px; margin:8px 0 4px; }
   #actions { font-size:12px; margin:16px 6px; }
 </style>
-<header><h1>Vallox · Graphic style</h1><p>Original MIT artwork · offline sample · 1.2.5</p></header>
+<header><h1>Vallox · Graphic style</h1><p>Original MIT artwork · offline sample · 1.2.6</p></header>
 <main id="cards"></main><div id="actions" role="status"></div>
 <script src="sample-data.js"></script>
 <script src="../../dist/vallox-dashboard.js"></script>
@@ -37,9 +37,18 @@
   hass.callService = async (...args) => { document.querySelector("#actions").textContent = JSON.stringify(args); };
   if (params.get("variant") === "bypass") hass.states["binary_sensor.ventilation_summer_mode"].state = "on";
   if (params.get("variant") === "stopped") hass.states["binary_sensor.ventilation"].state = "off";
+  if (params.get("variant") === "active") {
+    hass.states["switch.ventilation_switch"].state = "on";
+    hass.states["sensor.ventilation_boost_remaining"].state = "12";
+    hass.states["climate.ventilation"].state = "heat";
+    hass.states["input_boolean.vallox_shower_boost_active"].state = "on";
+    hass.states["timer.vallox_shower_boost"].state = "active";
+  }
+  const animation = ["on", "off"].includes(params.get("animation")) ? params.get("animation") : undefined;
   // Render the strategy's own leading cards, through the next group heading.
-  const configs = params.has("view") ? [{type:"custom:vallox-graphic-card",view:params.get("view"),grid_options:{columns:12,rows:"auto"}}]
-    : window.valloxDashboard.buildSection(hass, {style:"graphic",section:"overview"}).cards;
+  const configs = params.has("view")
+    ? [{type:"custom:vallox-graphic-card",view:params.get("view"),grid_options:{columns:12,rows:"auto"},...(animation?{animation}:{})}]
+    : window.valloxDashboard.buildSection(hass, {style:"graphic",section:"overview",...(animation?{animation}:{})}).cards;
   let graphics = 0;
   for (const config of configs) {
     const graphic = config.type === "custom:vallox-graphic-card";
