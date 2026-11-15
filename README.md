@@ -6,7 +6,13 @@
 
 A Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation). Current release: **1.2.7**.
 
-It ships as **section, view and dashboard strategies** under `custom:vallox-ventilation`. The UI discovers your entities and skips anything missing or disabled, so there is nothing you have to wire up by hand. The default style uses built-in Home Assistant cards (tile, heading, button, history-graph, markdown). An opt-in graphic style adds a wall-controller and animated heat-exchanger card with original inline SVG artwork.
+| Light theme (desktop) | Dark theme (phone) |
+|---|---|
+| ![Graphic ventilation dashboard with airflow animation, light](images/graphic-animated-light.gif) | ![Graphic ventilation dashboard with airflow animation, dark phone](images/graphic-animated-mobile-dark.gif) |
+
+*The recommended graphic dashboard: wall controller and animated ValloPlus heat exchanger, with Boost lit and airflow moving. Official sample (fan level 3, light desktop and dark phone).*
+
+It ships as **section, view and dashboard strategies** under `custom:vallox-ventilation`. The UI discovers your entities and skips anything missing or disabled, so there is nothing you have to wire up by hand. The recommended **graphic style** (`style: graphic`) leads with a wall-controller card and an animated heat-exchanger diagram, drawn as original inline SVG artwork. A [classic tiles style](#classic-overview-style), built from Home Assistant's own cards (tile, heading, button, history-graph, markdown), remains available.
 
 Supported integrations (auto-discovered):
 
@@ -15,18 +21,9 @@ Supported integrations (auto-discovered):
 | [vallox2mqtt](https://github.com/kotope/valloxesp) (ESP8266/ESP32 over RS485) | Vallox Digit SE, ValloPlus SE, and other RS485 models | climate fan modes 1–8, boost/fireplace switch, heating/motor status, service counter |
 | [Vallox](https://www.home-assistant.io/integrations/vallox/) (Home Assistant core) | Vallox MV series (network) | fan with profiles, efficiency, fan RPMs, filter date, supply-air targets, bypass lock |
 
-![Overview and history](images/section-desktop.png)
-
-*Full tiles dashboard: overview at the top, history below. From a real Vallox Digit SE running vallox2mqtt.*
-
-| Overview (mobile) | History (mobile) | Section (desktop column) |
-|---|---|---|
-| ![Overview](images/overview-mobile.png) | ![History](images/history-mobile.png) | ![Section](images/section-desktop.png) |
-
-*Mobile and column crops of the same dashboard (tiles style).*
-
 ## What you get
 
+- **Graphic dashboard (recommended):** a wall-controller card (status LEDs, fan speed +/−, Boost / Heating / Shower) and an animated ValloPlus-style heat-exchanger diagram. Enable it with `style: graphic`. The `animation` option is `auto`, `on` or `off`.
 - **Controls:** fan speed (vallox2mqtt modes 1–8, or core profiles and fan speed), heating mode, and the boost/fireplace switch.
 - **Air temperatures:** outdoor, supply, extract and exhaust, with colour-coded icons.
 - **Heat recovery:** the unit's efficiency sensor when present; otherwise a guarded estimate `(extract − exhaust) ÷ (extract − outdoor)`, shown only when extract minus outdoor is at least **4 K**, clamped to 0–100%.
@@ -38,7 +35,7 @@ Supported integrations (auto-discovered):
 - **Temperature flow strip:** outdoor → supply, heat recovery, extract → exhaust, when all four temperatures exist. Defaults on for units that already expose 1.2 extras; older units keep their original layout unless you opt in.
 - **Optional shower boost:** timed fan-level buttons, plus countdown and cancel while active, when the package entities exist.
 - **Optional auto humidity boost:** enable toggle and helper tiles when those helpers exist.
-- **Graphic style (1.2.7):** a wall-controller card (status LEDs, fan speed +/−, Boost / Heating / Shower) and an animated ValloPlus-style heat-exchanger diagram (see below).
+- **Classic tiles style:** the same overview and history as a built-in-card dashboard, without the controller and exchanger graphics (see [Classic overview style](#classic-overview-style)).
 - English and German labels, taken from your Home Assistant language. Light and dark themes follow HA CSS variables.
 
 ## Installation
@@ -65,6 +62,8 @@ Edit any sections view, open the raw configuration editor, and add under `sectio
 ```yaml
 - strategy:
     type: custom:vallox-ventilation
+    style: graphic
+    animation: auto    # auto | on | off
 ```
 
 ### View strategy
@@ -76,6 +75,8 @@ views:
     icon: mdi:hvac
     strategy:
       type: custom:vallox-ventilation
+      style: graphic
+      animation: auto    # auto | on | off
 ```
 
 ### Dashboard strategy
@@ -85,6 +86,8 @@ Create a new dashboard from scratch, open the raw configuration editor and repla
 ```yaml
 strategy:
   type: custom:vallox-ventilation
+  style: graphic
+  animation: auto    # auto | on | off
 ```
 
 ### Options
@@ -93,7 +96,7 @@ All options are optional and work for every strategy type.
 
 | Option | Default | Description |
 |---|---|---|
-| `style` | `tiles` | `graphic` enables the digital controller and exchanger schematic. Default tiles output is unchanged from 1.1.0. |
+| `style` | `tiles` | Recommended: `graphic` for the wall-controller and animated exchanger. `tiles` is the strategy default and keeps the classic 1.1.0 built-in-card overview. |
 | `section` | `all` | Section strategy only: `all` (overview and history in one section), `overview` or `history`. |
 | `sections` | `[overview, history]` | View and dashboard only: which sections to show, in that order. |
 | `max_columns` | `3` | View and dashboard only: maximum number of section columns. |
@@ -214,13 +217,7 @@ You can also generate one for your own entities in the browser console of your d
 
 ## Graphic style
 
-The wall-controller and heat-exchanger cards, with airflow dashes and fans in motion. This is the same official sample as the stills later on this page (Boost on, fan level 3):
-
-| Light theme (desktop) | Dark theme (phone) |
-|---|---|
-| ![Graphic style with airflow animation, light](images/graphic-animated-light.gif) | ![Graphic style with airflow animation, dark phone](images/graphic-animated-mobile-dark.gif) |
-
-Add `style: graphic` to any section, view or dashboard strategy to lead with a wall-controller card and a heat-exchanger diagram:
+This is the recommended dashboard. The looping animations at the top of this README are this view (Boost on, fan level 3). Add `style: graphic` to any section, view or dashboard strategy:
 
 ```yaml
 strategy:
@@ -343,13 +340,33 @@ component orientation; no manual or GPL Helios/Vallox artwork or code is include
 Offline preview and screenshot instructions: [tools/render](tools/render/README.md).
 The harness uses sanitized fixture samples (6/17/21/9 °C, level 3, post-heat on,
 12 minutes of built-in boost, so the Boost button appears lit) with the airflow animation playing.
-Animated GIFs of this view are at the start of this section; the stills below are single frames of the same sample.
+Animated GIFs of this view are at the top of this README; the stills below are single frames of the same sample.
 
 | Light theme | Dark theme |
 |---|---|
 | ![Graphic style, light](images/graphic-light.png) | ![Graphic style, dark](images/graphic-dark.png) |
 
 Phone sections layout (390 px, strategy grid sizing; includes the following switch tile): [light](images/graphic-mobile-light.png) · [dark](images/graphic-mobile-dark.png) · [German](images/graphic-mobile-de.png).
+
+## Classic overview style
+
+The tiles style (`style: tiles`, also the strategy default if you omit `style`) uses only built-in Home Assistant cards. It is unchanged from 1.1.0:
+
+```yaml
+strategy:
+  type: custom:vallox-ventilation
+  style: tiles
+```
+
+![Overview and history](images/section-desktop.png)
+
+*Full tiles dashboard: overview at the top, history below. From a real Vallox Digit SE running vallox2mqtt.*
+
+| Overview (mobile) | History (mobile) | Section (desktop column) |
+|---|---|---|
+| ![Overview](images/overview-mobile.png) | ![History](images/history-mobile.png) | ![Section](images/section-desktop.png) |
+
+*Mobile and column crops of the same dashboard (tiles style).*
 
 ## Expected entities (vallox2mqtt / valloxesp)
 
