@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.5
+
+- Cap graphic cards at the designed 600 px drawing width and centre them on wider tablet and laptop layouts, so the complete airflow and fan animation stays visible. Phone cards still fill their column.
+- Preserve the 1.2.4 look: 1.2.1 flat artwork, neutral gray fallbacks, full-width stacked phone cards and the ValloPlus exchanger shape.
+
 ## 1.2.4
 
 - Replace teal-tinted graphic surface, border and text fallbacks with theme-derived neutral grays; use neutral light/dark palettes in the offline preview.
