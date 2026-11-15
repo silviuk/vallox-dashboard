@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.8
+
+- Remove the overview heading badge for the unit status sensor. vallox2mqtt sets its icon to `mdi:air-conditioner`, and Home Assistant rendered that badge as "A/C" at the top right of the graphic dashboard. This is a ventilation unit, not an air conditioner. The outdoor temperature and service-needed badges are unchanged. The classic tiles heading is unchanged.
+- Preserve the 1.2.7 look and behaviour: dark-mode filter contrast, animation option, active buttons, 1.2.1 flat artwork, neutral gray surfaces, 600 px wide-layout cap, full-width stacked phone cards and the ValloPlus exchanger shape.
+
 ## 1.2.7
 
 - Raise the contrast of the F7 and G3 filter labels, duct numbers and filter pleats in dark mode so the labels meet WCAG AA against the card background in the default Home Assistant dark theme and with the dark fallback colours. The light-mode look is unchanged.

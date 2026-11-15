@@ -1,6 +1,6 @@
 {
   "name": "vallox-dashboard",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "private": true,
   "description": "Graphic wall-controller and animated heat-exchanger Lovelace dashboard for Vallox units (vallox2mqtt and core Vallox)",
   "license": "MIT",
