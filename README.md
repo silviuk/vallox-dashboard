@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/silviuk/vallox-dashboard.svg)](https://github.com/silviuk/vallox-dashboard/releases)
 [![Validate](https://github.com/silviuk/vallox-dashboard/actions/workflows/validate.yml/badge.svg)](https://github.com/silviuk/vallox-dashboard/actions/workflows/validate.yml)
 
-A Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation). Current release: **1.2.4**.
+A Lovelace UI for **Vallox ventilation units** (MVHR / heat-recovery ventilation). Current release: **1.2.5**.
 
 It ships as **section, view and dashboard strategies** under `custom:vallox-ventilation`. The UI discovers your entities and skips anything missing or disabled, so there is nothing you have to wire up by hand. The default style uses built-in Home Assistant cards (tile, heading, button, history-graph, markdown). An opt-in graphic style adds one bundled custom card with original inline SVG artwork.
 
@@ -34,7 +34,7 @@ Supported integrations (auto-discovered):
 - **Temperature flow strip:** outdoor → supply, heat recovery, extract → exhaust, when all four temperatures exist. Defaults on for units that already expose 1.2 extras; older units keep their original layout unless you opt in.
 - **Optional shower boost:** timed fan-level buttons, plus countdown and cancel while active, when the package entities exist.
 - **Optional auto humidity boost:** enable toggle and helper tiles when those helpers exist.
-- **Graphic style (1.2.4):** digital controller panel and heat-exchanger diagram (see below).
+- **Graphic style (1.2.5):** digital controller panel and heat-exchanger diagram (see below).
 - English and German labels, taken from your Home Assistant language. Light and dark themes follow HA CSS variables.
 
 ## Installation
@@ -209,7 +209,7 @@ You can also generate one for your own entities in the browser console of your d
 
 ## Graphic style
 
-Add `style: graphic` to any section, view or dashboard strategy (1.2.0+; phone layout and artwork updated in 1.2.3; neutral gray palette in 1.2.4):
+Add `style: graphic` to any section, view or dashboard strategy (1.2.0+; phone layout and artwork updated in 1.2.3; neutral gray palette in 1.2.4; wide-layout animation size in 1.2.5):
 
 ```yaml
 strategy:
@@ -245,7 +245,7 @@ The card picker lists **Vallox graphic**; change `view` in YAML to select the ex
 
 ### Digital controller
 
-The 1.2.4 controller uses neutral gray surfaces with the 1.2.3 flat panel, header strip, LCD and rounded rectangular buttons, with the full-width sizing introduced in 1.2.2.
+The 1.2.5 controller keeps the 1.2.4 neutral gray surfaces with the 1.2.3 flat panel, header strip, LCD and rounded rectangular buttons, and the full-width phone sizing introduced in 1.2.2. On tablets and laptops the drawing is centred and capped at 600 px so the whole panel stays visible.
 The panel shows a read-only power indicator and available heater, bypass, service,
 alarm, CO₂ and humidity indicators. Its LCD shows fan level with adjacent −/+ controls and a secondary readout;
 ▲/▼ cycle available temperatures, recovery, built-in boost time and fault code locally.
@@ -272,7 +272,10 @@ the badge is hidden and supply follows a clear bottom route with one right-angle
 Action buttons sit in one row of three on desktop and phones (at least 40 px high at the
 documented 430 px phone layout; labels shorten on narrow cards). Boost time appears on its button.
 Directional dashed streams and fan animation follow fan level and stop when the unit
-or the corresponding motor is off. Reduced-motion preferences disable all animation.
+or the corresponding motor is off. On wide tablet and laptop layouts the drawing stays
+within 600 px (the SVG viewBox width) and is centred in the card, so the complete airflow
+and fans stay in view at the designed size; on a phone the card still fills the column.
+Reduced-motion preferences disable all animation.
 Temperatures, recovery, heating, bypass, boost and alarm highlights update from HA states.
 
 ### Roles used by the graphics

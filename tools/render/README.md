@@ -2,13 +2,13 @@ Open `index.html` directly in a browser. All resources are local. No server, dep
 fonts, remote images, or Home Assistant connection are used. Buttons only log mock calls.
 
 Query options: `?theme=dark`, `?lang=de`, `?variant=bypass`, `?variant=stopped`,
-`?layout=phone` (390 px), and `?view=controller` / `?view=exchanger`; combine with `&`.
+`?layout=phone` (390 px), `?layout=wide` (1280 px), and `?view=controller` / `?view=exchanger`; combine with `&`.
 Regenerate sanitized sample data with `node tools/render/generate.mjs`.
 
 The phone preview uses a 12-column sections grid and the strategy's own
 `grid_options.columns` and `grid_options.rows`. The graphic cards span all 12 columns
 with automatic height. Numeric rows emulate 56 px rows with 8 px gaps. Phone padding
-leaves 366 px for cards. The default preview also stacks the cards, at 480 px wide.
+leaves 366 px for cards. The default preview also stacks the cards, at 480 px wide. On `?layout=wide` the cards stay centred and do not exceed the 600 px drawing cap.
 
 Run the local capture script from the repository root:
 
