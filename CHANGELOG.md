@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.6
+
+- Keep the airflow and fan animation playing by default, but respect `prefers-reduced-motion` (Windows "Animation effects" / "Animate controls and elements inside windows" off, Android "Remove animations", and similar settings). While motion is off, static arrowheads still show the flow direction.
+- Add graphic option `animation: auto|on|off` (default `auto`) so the subtle motion can be forced on or off. `on` overrides reduced motion.
+- Show the controller Boost, Heating and Shower buttons in a flat 1.2.1 on-state (soft accent fill, `aria-pressed`) when that mode is active: built-in boost switch or remaining time, climate `heat`, and the shower package helper or timer.
+- Preserve the 1.2.5 layout and look: 1.2.1 flat artwork, neutral gray fallbacks, 600 px wide-layout cap, full-width stacked phone cards and the ValloPlus exchanger shape.
+
 ## 1.2.5
 
 - Cap graphic cards at the designed 600 px drawing width and centre them on wider tablet and laptop layouts, so the complete airflow and fan animation stays visible. Phone cards still fill their column.

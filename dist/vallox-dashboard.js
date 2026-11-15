@@ -8,7 +8,7 @@
  *   - vallox (Home Assistant core, Vallox MV units over the network)
  * Built-in cards plus original inline SVG graphics. MIT licensed.
  */
-const VALLOX_DASHBOARD_VERSION = "1.2.5";
+const VALLOX_DASHBOARD_VERSION = "1.2.6";
 
 const TEXT = {
   en: {
@@ -430,8 +430,13 @@ function graphicModel(hass, config = {}, readout = 0) {
     && Number.isInteger(p.minutes) && p.minutes > 0 && p.minutes <= 120);
   const boost = on("boost_switch") || number("boost_remaining") > 0;
   const usableClimate = graphicAvailable(state("climate"));
+  const animation = config.animation === "on" || config.animation === "off" ? config.animation : "auto";
+  const reduceMotion = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   return { unit, e, t, g, config, value, number, on, flag, anyFlag, formatted, max, modes, level, power, alarm, efficiency,
-    readouts, selected, preset, boost, hass,
+    readouts, selected, preset, boost, hass, animation,
+    animate: animation === "on" || (animation === "auto" && !reduceMotion),
+    heating: value("climate") === "heat",
+    shower: on("shower_active") || value("shower_timer") === "active",
     fanPercentage: graphicAvailable(state("fan")) && graphicNumber(state("fan")?.attributes?.percentage) !== null
       ? `${graphicNumber(state("fan").attributes.percentage)} %` : null,
     canFan: usableClimate && level !== null && modes.length > 0,
@@ -446,7 +451,7 @@ const GRAPHIC_CSS = `
   :host { display:block; font-family:var(--primary-font-family, inherit); color:var(--primary-text-color,#212121);
     --line:var(--divider-color,#e0e0e0); --muted:var(--secondary-text-color,#727272);
     --surface:var(--ha-card-background,var(--card-background-color,#fff));
-    --active:var(--state-active-color,#e69b28); --cold:#369ac7; --warm:#df8054; }
+    --active:var(--state-active-color,#e69b28); --cold:#369ac7; --warm:#df8054; --speed:1.4s; }
   ha-card { display:block; box-sizing:border-box; background:var(--surface); border-radius:20px; overflow:hidden;
     border:1px solid var(--line); box-shadow:none; container-type:inline-size;
     width:100%; max-width:600px; margin-inline:auto; }
@@ -454,6 +459,7 @@ const GRAPHIC_CSS = `
   text { fill:currentColor; font-size:20px; } .muted { fill:var(--muted); font-size:20px; }
   .duct { fill:var(--surface); stroke:var(--line); stroke-width:2; }
   .body,.button { fill:var(--surface); stroke:var(--line); stroke-width:2; }
+  .button.on { fill:var(--active); fill-opacity:.28; stroke:var(--active); }
   .strip { fill:var(--line); opacity:.35; } .lcd { fill:var(--line); fill-opacity:.22; stroke:var(--line); }
   .big { font-size:64px; font-weight:600; letter-spacing:-3px; }
   .title { font-size:24px; font-weight:600; } .value { font-size:28px; font-weight:600; }
@@ -462,11 +468,14 @@ const GRAPHIC_CSS = `
   .led { fill:var(--line); stroke:var(--muted); } .lit { fill:var(--active); stroke:var(--active); }
   .warning { fill:var(--error-color,#db625a); } .button { cursor:pointer; }
   [role=button]:focus .button { stroke:var(--primary-color,#369ac7); stroke-width:3; }
-  [aria-disabled=true] { opacity:.65; cursor:default; } [role=button] text { pointer-events:none; }
+  [aria-disabled=true] { cursor:default; } [aria-disabled=true]:not([aria-pressed=true]) { opacity:.65; }
+  [role=button] text { pointer-events:none; }
   .pipe { fill:none; stroke-width:13; stroke-linecap:round; stroke-linejoin:round; opacity:.18; }
-  .flow { fill:none; stroke-width:3; stroke-dasharray:5 13; stroke-linecap:round; animation:flow var(--speed) linear infinite; }
+  .flow { fill:none; stroke-width:3; stroke-dasharray:5 13; stroke-linecap:round; stroke-dashoffset:0;
+    animation:flow var(--speed) linear infinite; }
   .cold { stroke:var(--cold); } .warm { stroke:var(--warm); }
-  .stopped { animation:none!important; opacity:.28; } .spin { animation:spin var(--speed) linear infinite; }
+  .stopped { animation:none!important; opacity:.28; } .static-cue { animation:none!important; }
+  .spin { transform-box:fill-box; transform-origin:center; animation:spin var(--speed) linear infinite; }
   .heater { stroke:var(--line); fill:none; stroke-width:4; } .hot { stroke:var(--active); }
   .cell { fill:var(--surface); stroke:var(--line); stroke-width:2; }
   .fin { stroke:var(--line); stroke-width:2; opacity:.7; } .badge { fill:var(--line); fill-opacity:.35; }
@@ -476,14 +485,22 @@ const GRAPHIC_CSS = `
   .recovery-label { fill:var(--muted); font-size:20px; }
   .error { padding:0 20px 12px; color:var(--error-color,#db625a); font-size:12px; }
   .error:empty { display:none; }
-  @keyframes flow { to { stroke-dashoffset:-36; } } @keyframes spin { to { transform:rotate(360deg); } }
-  @media(prefers-reduced-motion:reduce) { .flow,.spin { animation:none!important; } }
+  @keyframes flow { from { stroke-dashoffset:0; } to { stroke-dashoffset:-36; } }
+  @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  @media(prefers-reduced-motion:reduce) {
+    :host(:not([data-animation="on"])) .flow, :host(:not([data-animation="on"])) .spin { animation:none!important; }
+  }
+  :host([data-animation="off"]) .flow, :host([data-animation="off"]) .spin { animation:none!important; }
+  :host([data-animation="on"]) .flow { animation:flow var(--speed) linear infinite !important; }
+  :host([data-animation="on"]) .spin { animation:spin var(--speed) linear infinite !important; }
+  :host([data-animation="on"]) .stopped, :host([data-animation="on"]) .static-cue { animation:none!important; }
 `;
 const svgText = (x, y, text, cls = "", anchor = "start") =>
   `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${escapeGraphic(text)}</text>`;
-function graphicButton(x, y, w, h, label, action, disabled = false, glyph = label) {
-  return `<g role="button" tabindex="${disabled ? -1 : 0}" aria-label="${escapeGraphic(label)}" aria-disabled="${disabled}" data-action="${action}">
-    <rect class="button" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/>
+function graphicButton(x, y, w, h, label, action, disabled = false, glyph = label, pressed = null) {
+  return `<g role="button" tabindex="${disabled ? -1 : 0}" aria-label="${escapeGraphic(label)}" aria-disabled="${disabled}"${
+    pressed === null ? "" : ` aria-pressed="${pressed}"`} data-action="${action}">
+    <rect class="button${pressed ? " on" : ""}" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/>
     ${["increase", "decrease"].includes(action)
       ? `<path class="control-symbol" d="M${x + w / 2 - 16} ${y + h / 2}h32${action === "increase" ? `M${x + w / 2} ${y + h / 2 - 16}v32` : ""}"/>`
       : svgText(x + w / 2, y + h / 2 + 7, glyph, "", "middle")}</g>`;
@@ -529,12 +546,12 @@ function renderControllerSvg(m) {
   content += '</g>';
   const actions = [];
   if (e.boost_switch) actions.push([m.boost ? `${g.boost} ${e.boost_remaining && m.config.show?.boost_remaining !== false ? m.formatted("boost_remaining", ` ${g.minutes}`) : g.active}` : g.boost, "boost",
-    m.boost || !graphicAvailable(m.hass?.states[e.boost_switch])]);
-  if (m.canHeat) actions.push([g.heat_action, "heat", false]);
+    m.boost || !graphicAvailable(m.hass?.states[e.boost_switch]), m.boost]);
+  if (m.canHeat) actions.push([g.heat_action, "heat", false, m.heating]);
   if (e.shower_boost && m.preset && m.config.show?.shower_boost !== false) actions.push([g.shower_action, "shower",
-    !graphicAvailable(m.hass.states[e.shower_boost])]);
-  content += '<g class="actions">' + actions.map(([label, action, disabled]) =>
-    graphicButton(48 + actions.findIndex((item) => item[1] === action) * 172, actionsY, 160, 82, label, action, disabled)).join("") + '</g>';
+    !graphicAvailable(m.hass.states[e.shower_boost]), m.shower]);
+  content += '<g class="actions">' + actions.map(([label, action, disabled, pressed]) =>
+    graphicButton(48 + actions.findIndex((item) => item[1] === action) * 172, actionsY, 160, 82, label, action, disabled, label, pressed)).join("") + '</g>';
   return graphicSvg(g.controller, content, m.duration, height);
 }
 
@@ -544,10 +561,18 @@ function renderExchangerSvg(m) {
   let content = svgText(32, 38, g.exchanger, "title") + svgText(32, 66, m.unit.name, "muted")
     + '<rect class="body unit-casing" x="36" y="194" width="528" height="426" rx="24"/>'
     + '<defs><linearGradient id="extract-gradient" gradientUnits="userSpaceOnUse" x1="350" y1="330" x2="250" y2="498"><stop stop-color="var(--warm)"/><stop offset="1" stop-color="var(--cold)"/></linearGradient>'
-    + '<linearGradient id="supply-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="350" y2="498"><stop stop-color="var(--cold)"/><stop offset="1" stop-color="var(--warm)"/></linearGradient></defs>'
+    + '<linearGradient id="supply-gradient" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="350" y2="498"><stop stop-color="var(--cold)"/><stop offset="1" stop-color="var(--warm)"/></linearGradient>'
+    + (m.animate ? "" : '<marker id="flow-arrow-cold" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="var(--cold)"/></marker><marker id="flow-arrow-warm" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="var(--warm)"/></marker>')
+    + '</defs>'
     + '<path data-component="cell" class="cell" d="' + cell + '"/>';
-  const stream = (name, path, color, motor, inCell = false, extra = "") => '<g style="' + (inCell ? 'stroke:url(#' + name + '-gradient)' : '') + '"><path class="pipe ' + color + '" d="' + path + '"/>'
-    + '<path data-' + (inCell ? 'cell-stream' : 'stream') + '="' + name + '" ' + extra + ' class="flow ' + color + ' ' + (m.running(motor) ? '' : 'stopped') + '" d="' + path + '"/></g>';
+  const stream = (name, path, color, motor, inCell = false, extra = "") => {
+    const running = m.running(motor);
+    const cue = !m.animate && running && !inCell && (color === "cold" || color === "warm");
+    return '<g style="' + (inCell ? 'stroke:url(#' + name + '-gradient)' : '') + '"><path class="pipe ' + color + '" d="' + path + '"/>'
+      + '<path data-' + (inCell ? 'cell-stream' : 'stream') + '="' + name + '" ' + extra
+      + ' class="flow ' + color + ' ' + (running ? (m.animate ? "" : "static-cue") : "stopped") + '"'
+      + (cue ? ' marker-end="url(#flow-arrow-' + color + ')"' : "") + ' d="' + path + '"/></g>';
+  };
   // Separate exterior lanes; every component is centred on its own continuous stream.
   content += stream("outdoor", bypass ? "M210 194V300H170" : "M210 194V300L250 330", "cold", "motor_in")
     + stream("extract", "M370 194V300L350 330", "warm", "motor_out")
@@ -574,7 +599,7 @@ function renderExchangerSvg(m) {
   if (e.outdoor) content += filter("F7",210,240,"supply");
   if (e.extract) content += filter("G3",370,240,"extract");
   const fan = (role, x, y, streamName) => !e[role] ? "" : '<g data-fan="' + role + '" data-on-stream="' + streamName + '" transform="translate(' + x + ' ' + y + ')"><circle class="body" r="32" fill="var(--surface)"/>'
-    + '<g data-motor="' + role + '" class="' + (m.running(role) ? 'spin' : 'stopped') + '"><path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/></g><circle r="4" fill="var(--surface)"/></g>';
+    + '<g data-motor="' + role + '" class="' + (m.running(role) ? (m.animate ? "spin" : "") : "stopped") + '"><path fill="var(--muted)" d="M0 0C-24-28 22-30 4-4C40-9 24 30 2 5C-10 40-38 6-5 0Z"/></g><circle r="4" fill="var(--surface)"/></g>';
   content += fan("motor_in",480,390,"supply") + fan("motor_out",110,498,"extract")
     + '<path class="cell-outline" d="' + cell + '"/>';
   const heater = (role, x, y) => !e[role] ? "" : '<g data-on-stream="supply"><title>' + escapeGraphic(t[role]) + '</title><path data-heater="' + role + '" class="heater ' + (m.on(role) ? 'hot' : '') + '" d="M' + (x-24) + ' ' + y + 'l8 -12 8 24 8 -24 8 24 8 -24 8 12"/></g>';
@@ -625,7 +650,17 @@ class ValloxGraphicCard extends HTMLElement {
     const m = graphicModel(this._hass, this._config, this._readout);
     return m;
   }
+  _watchMotion() {
+    if (this._mq || typeof matchMedia !== "function") return;
+    this._mq = matchMedia("(prefers-reduced-motion: reduce)");
+    this._onMotion = () => { this._signature = null; if (this._hass) this.hass = this._hass; };
+    if (this._mq.addEventListener) this._mq.addEventListener("change", this._onMotion);
+    else this._mq.addListener(this._onMotion);
+  }
   _render(m = this._model()) {
+    this._watchMotion();
+    if (typeof this.setAttribute === "function") this.setAttribute("data-animation", m.animation);
+    if (this.style && typeof this.style.setProperty === "function") this.style.setProperty("--speed", m.duration);
     const focused = this.shadowRoot.activeElement?.getAttribute("data-action");
     this.shadowRoot.innerHTML = `<style>${GRAPHIC_CSS}</style><ha-card>${
       this._config.view === "controller" ? renderControllerSvg(m) : renderExchangerSvg(m)
@@ -682,6 +717,7 @@ function graphicOverview(hass, u, t, config) {
     ...(view === "exchanger" ? { show_status: show.controller === false } : {}),
     entities: { ...Object.fromEntries(Object.keys(PACKAGE_ENTITIES).map((r) => [r, null])), ...u.e }, show: { ...show },
     ...(config.shower_boost_presets ? { shower_boost_presets: config.shower_boost_presets } : {}),
+    ...(config.animation === "on" || config.animation === "off" ? { animation: config.animation } : {}),
   }));
   // Pair consecutive half-width entity tiles within each row group. Other cards
   // end the group and must never acquire tile grid options (especially headings).

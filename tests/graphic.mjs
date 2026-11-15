@@ -20,6 +20,11 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
     && css.includes("animation:spin var(--speed) linear infinite")
     && !/@media\s*\([^)]*(?:min|max)-width[^)]*\)[^{]*\{[^}]*animation\s*:\s*none/.test(css),
     "graphics fill the card on phones, cap at 600 px on wide layouts, and keep airflow animation at every width");
+  check(css.includes(':host(:not([data-animation="on"])) .flow')
+    && css.includes(':host([data-animation="off"]) .flow')
+    && css.includes(':host([data-animation="on"]) .flow')
+    && css.includes("transform-box:fill-box") && css.includes(".static-cue") && css.includes(".button.on"),
+    "animation auto/on/off CSS, fill-box fan origin, static flow cue and active button fill");
   const clone = () => structuredClone(hass);
   const model = (h = hass, config = {}) => api.graphicModel(h, config);
   const render = (view, h = hass, config = {}) => api[view === "controller" ? "renderControllerSvg" : "renderExchangerSvg"](model(h, config));
@@ -177,6 +182,84 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
     && Object.values(texts.de).every(Boolean), "graphic EN/DE label parity");
   check(render("controller", { ...hass, locale: { language: "de" } }).includes("Digitalregler")
     && render("exchanger", { ...hass, locale: { language: "de" } }).includes("Wärmetauscher"), "graphic German labels");
+  const groupFor = (svg, action) => [...svg.matchAll(/<g role="button"[^>]+>/g)].map((m) => m[0])
+    .find((tag) => tag.includes(`data-action="${action}"`));
+  const rectClass = (svg, action) => {
+    const i = svg.search(new RegExp(`data-action="${action}"`));
+    return i < 0 ? null : svg.slice(i, i + 280).match(/<rect class="([^"]+)"/)?.[1];
+  };
+  check(model().animation === "auto" && model().animate === true
+    && render("exchanger").includes('class="spin"')
+    && !render("exchanger").includes("static-cue")
+    && !render("exchanger").includes("flow-arrow"),
+    "animation auto without reduced motion keeps CSS airflow and fan spin");
+  const offEx = render("exchanger", hass, { animation: "off" });
+  check(model(hass, { animation: "off" }).animate === false
+    && !offEx.includes('class="spin"') && offEx.includes("static-cue")
+    && offEx.includes('marker-end="url(#flow-arrow-cold)"')
+    && offEx.includes('marker-end="url(#flow-arrow-warm)"')
+    && offEx.includes('id="flow-arrow-cold"'),
+    "animation off stops motion and draws static flow-direction arrows");
+  check(model(hass, { animation: "on" }).animate === true
+    && render("exchanger", hass, { animation: "on" }).includes('class="spin"')
+    && !render("exchanger", hass, { animation: "on" }).includes("static-cue"),
+    "animation on keeps airflow and fans moving");
+  check(model(hass, { animation: "maybe" }).animation === "auto"
+    && model(hass, { animation: "maybe" }).animate === true,
+    "invalid animation option falls back to auto");
+  const previousMatchMedia = context.matchMedia;
+  context.matchMedia = () => ({ matches: true, addEventListener() {}, addListener() {} });
+  try {
+    const reduced = render("exchanger", hass, { animation: "auto" });
+    check(model(hass, { animation: "auto" }).animate === false
+      && reduced.includes("static-cue") && !reduced.includes('class="spin"')
+      && reduced.includes("flow-arrow"),
+      "animation auto stops under prefers-reduced-motion and keeps static flow arrows");
+    check(model(hass, { animation: "on" }).animate === true
+      && render("exchanger", hass, { animation: "on" }).includes('class="spin"'),
+      "animation on overrides reduced motion");
+  } finally {
+    if (previousMatchMedia) context.matchMedia = previousMatchMedia;
+    else delete context.matchMedia;
+  }
+  const forwarded = api.buildSection(hass, { style: "graphic", animation: "on" })
+    .cards.filter((c) => c.type === "custom:vallox-graphic-card");
+  check(forwarded.length === 2 && forwarded.every((c) => c.animation === "on"),
+    "strategy forwards animation: on to graphic cards");
+  check(api.buildSection(hass, { style: "graphic" }).cards
+    .filter((c) => c.type === "custom:vallox-graphic-card").every((c) => !("animation" in c)),
+    "strategy omits default animation auto from card config");
+
+  const idleButtons = clone();
+  idleButtons.states[roles.boost_switch].state = "off";
+  idleButtons.states[roles.boost_remaining].state = "0";
+  idleButtons.states[roles.climate].state = "fan_only";
+  idleButtons.states[roles.post_heating].state = "on";
+  idleButtons.states[roles.shower_active].state = "off";
+  idleButtons.states[roles.shower_timer].state = "idle";
+  const idleSvg = render("controller", idleButtons);
+  check(["boost", "heat", "shower"].every((action) => groupFor(idleSvg, action)?.includes('aria-pressed="false"')
+      && rectClass(idleSvg, action) === "button")
+    && model(idleButtons).heating === false && model(idleButtons).boost === false && model(idleButtons).shower === false,
+    "idle boost, heating and shower buttons are not highlighted; post-heating does not latch Heating");
+
+  const activeButtons = clone();
+  activeButtons.states[roles.boost_switch].state = "on";
+  activeButtons.states[roles.boost_remaining].state = "12";
+  activeButtons.states[roles.climate].state = "heat";
+  activeButtons.states[roles.shower_active].state = "on";
+  activeButtons.states[roles.shower_timer].state = "active";
+  const activeSvg = render("controller", activeButtons);
+  check(["boost", "heat", "shower"].every((action) => groupFor(activeSvg, action)?.includes('aria-pressed="true"')
+      && rectClass(activeSvg, action) === "button on")
+    && model(activeButtons).heating && model(activeButtons).boost && model(activeButtons).shower,
+    "active boost, heating and shower buttons are filled and aria-pressed");
+  const timerOnly = clone();
+  timerOnly.states[roles.shower_active].state = "off";
+  timerOnly.states[roles.shower_timer].state = "active";
+  check(model(timerOnly).shower && rectClass(render("controller", timerOnly), "shower") === "button on",
+    "shower button follows the package timer when the active helper is off");
+
   const Card = defined["vallox-graphic-card"], card = new Card();
   check(card.getGridOptions().rows === "auto" && card.getGridOptions().min_columns === 12 && card.getCardSize() === 7, "natural grid rows and compact controller masonry estimate");
   card._config = { view: "exchanger" };
@@ -212,7 +295,9 @@ export async function testGraphic({ api, defined, hass, roles, check, context, v
   await card._action("boost");
   check(JSON.stringify(calls.pop()) === JSON.stringify(["switch", "turn_on", { entity_id: roles.boost_switch }]), "boost only turns on");
   live.states[roles.boost_remaining].state = "12"; card.hass = live; await card._action("boost");
-  check(calls.length === 0 && html.includes("12 min") && html.includes("aria-disabled=\"true\""), "active boost disabled with countdown");
+  check(calls.length === 0 && html.includes("12 min") && html.includes("aria-disabled=\"true\"")
+    && html.includes("aria-pressed=\"true\"") && html.includes('class="button on"'),
+    "active boost disabled with countdown and on-state fill");
   live.states[roles.climate].state = "fan_only"; card.hass = live; await card._action("heat");
   check(calls.pop()?.[2].hvac_mode === "heat", "heat toggle from fan_only");
   live.states[roles.climate].state = "heat"; card.hass = live; await card._action("heat");

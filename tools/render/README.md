@@ -1,8 +1,9 @@
 Open `index.html` directly in a browser. All resources are local. No server, dependencies,
 fonts, remote images, or Home Assistant connection are used. Buttons only log mock calls.
 
-Query options: `?theme=dark`, `?lang=de`, `?variant=bypass`, `?variant=stopped`,
-`?layout=phone` (390 px), `?layout=wide` (1280 px), and `?view=controller` / `?view=exchanger`; combine with `&`.
+Query options: `?theme=dark`, `?lang=de`, `?variant=bypass`, `?variant=stopped`, `?variant=active`
+(all three action buttons on), `?animation=on|off`, `?layout=phone` (390 px), `?layout=wide` (1280 px),
+and `?view=controller` / `?view=exchanger`; combine with `&`.
 Regenerate sanitized sample data with `node tools/render/generate.mjs`.
 
 The phone preview uses a 12-column sections grid and the strategy's own
@@ -32,7 +33,8 @@ The script captures and trims all five PNGs to the measured content bounds autom
 Final widths are 536 px for desktop and 390 px for phone; heights follow content.
 The script prints each final size. No manual cropping is needed.
 
-Animation respects the operating system's reduced-motion preference. The default paired
+Animation respects the operating system's reduced-motion preference unless `?animation=on`
+is set; `?animation=off` always shows the static flow-direction arrows. The default paired
 preview hides duplicate exchanger status, matching the strategy; `?view=exchanger`
 shows standalone fan/boost badges. Keep the same sample data. This is development
 tooling only; HA loads only `dist/vallox-dashboard.js`.
